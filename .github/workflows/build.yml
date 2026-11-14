@@ -43,14 +43,14 @@ jobs:
         run: |
           APP=build/Build/Products/Release-iphoneos/Habits.app
           ROOT="$PWD"
-          echo "--- entitlements file ---"; cat "$ROOT/Config/Habits.entitlements"
-          echo "--- before signing ---"; ldid -e "$APP/Habits" || true
           # Sign the extension first, then the app.
           ldid -S"$ROOT/Config/HabitsWidgets.entitlements" "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
           ldid -S"$ROOT/Config/Habits.entitlements" "$APP/Habits"
-          echo "--- app after signing (ldid -e) ---"; ldid -e "$APP/Habits"
-          echo "--- appex after signing (ldid -e) ---"; ldid -e "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
-          echo "--- codesign view ---"; codesign -d --entitlements - "$APP" 2>&1 || true
+          echo "--- app entitlements ---"; ldid -e "$APP/Habits"
+          echo "--- widgets entitlements ---"; ldid -e "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
+          # Fail the build if the app group did not make it into the signatures.
+          ldid -e "$APP/Habits" | grep -q "group.com.ghazaly.habits"
+          ldid -e "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets" | grep -q "group.com.ghazaly.habits"
           mkdir Payload
           cp -R "$APP" Payload/
           zip -qry Habits.ipa Payload

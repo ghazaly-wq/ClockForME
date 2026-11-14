@@ -41,6 +41,9 @@ targets:
             CFBundleURLSchemes: [habits]
     entitlements:
       path: Config/Habits.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.ghazaly.habits
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ghazaly.habits
@@ -61,6 +64,9 @@ targets:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
       path: Config/HabitsWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.ghazaly.habits
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ghazaly.habits.widgets
