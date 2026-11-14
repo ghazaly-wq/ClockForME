@@ -1,0 +1,246 @@
+{
+  "sourceLanguage": "ar",
+  "strings": {
+    "الرئيسية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرئيسية"
+          }
+        }
+      }
+    },
+    "المهمات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهمات"
+          }
+        }
+      }
+    },
+    "التنبيهات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التنبيهات"
+          }
+        }
+      }
+    },
+    "الإنجازات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإنجازات"
+          }
+        }
+      }
+    },
+    "صفحاتي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صفحاتي"
+          }
+        }
+      }
+    },
+    "الإعدادات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات"
+          }
+        }
+      }
+    },
+    "المظهر": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المظهر"
+          }
+        }
+      }
+    },
+    "تلقائي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تلقائي"
+          }
+        }
+      }
+    },
+    "فاتح": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فاتح"
+          }
+        }
+      }
+    },
+    "داكن": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "داكن"
+          }
+        }
+      }
+    },
+    "الأرقام": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأرقام"
+          }
+        }
+      }
+    },
+    "فحص النظام": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فحص النظام"
+          }
+        }
+      }
+    },
+    "مجموعة التطبيق (App Group)": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجموعة التطبيق (App Group)"
+          }
+        }
+      }
+    },
+    "متصلة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متصلة"
+          }
+        }
+      }
+    },
+    "غير متصلة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير متصلة"
+          }
+        }
+      }
+    },
+    "الإصدار": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإصدار"
+          }
+        }
+      }
+    },
+    "تم": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم"
+          }
+        }
+      }
+    },
+    "عاداتي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عاداتي"
+          }
+        }
+      }
+    },
+    "قريباً": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قريباً"
+          }
+        }
+      }
+    },
+    "هنا تظهر مهماتك الرئيسية والفرعية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنا تظهر مهماتك الرئيسية والفرعية"
+          }
+        }
+      }
+    },
+    "هنا تظهر منبهاتك وأوقات الصلاة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنا تظهر منبهاتك وأوقات الصلاة"
+          }
+        }
+      }
+    },
+    "هنا تظهر إنجازاتك ومستواك وجوائزك": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنا تظهر إنجازاتك ومستواك وجوائزك"
+          }
+        }
+      }
+    },
+    "هنا تبني صفحاتك الخاصة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنا تبني صفحاتك الخاصة"
+          }
+        }
+      }
+    },
+    "ملخص يومك يظهر هنا": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص يومك يظهر هنا"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
