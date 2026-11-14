@@ -42,10 +42,15 @@ jobs:
       - name: Fake-sign with entitlements and package IPA
         run: |
           APP=build/Build/Products/Release-iphoneos/Habits.app
+          ROOT="$PWD"
+          echo "--- entitlements file ---"; cat "$ROOT/Config/Habits.entitlements"
+          echo "--- before signing ---"; ldid -e "$APP/Habits" || true
           # Sign the extension first, then the app.
-          ldid -SConfig/HabitsWidgets.entitlements "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
-          ldid -SConfig/Habits.entitlements "$APP/Habits"
-          echo "App entitlements:" && ldid -e "$APP/Habits"
+          ldid -S"$ROOT/Config/HabitsWidgets.entitlements" "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
+          ldid -S"$ROOT/Config/Habits.entitlements" "$APP/Habits"
+          echo "--- app after signing (ldid -e) ---"; ldid -e "$APP/Habits"
+          echo "--- appex after signing (ldid -e) ---"; ldid -e "$APP/PlugIns/HabitsWidgets.appex/HabitsWidgets"
+          echo "--- codesign view ---"; codesign -d --entitlements - "$APP" 2>&1 || true
           mkdir Payload
           cp -R "$APP" Payload/
           zip -qry Habits.ipa Payload
