@@ -24,7 +24,7 @@ struct ScheduleFields: View {
                 if newKind == .prayer, !schedule.time.isPrayerBased {
                     schedule.time = .prayer(.fajr, .before, hours: 0, minutes: 30)
                 } else if newKind == .clock, schedule.time.isPrayerBased {
-                    schedule.time = .clock(hour: 7, minute: 0)
+                    schedule.time = .currentClock()
                     schedule.extraPrayers = []
                 }
             }

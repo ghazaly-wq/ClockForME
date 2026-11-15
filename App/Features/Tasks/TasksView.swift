@@ -14,21 +14,15 @@ enum EditorTarget: Identifiable {
     }
 }
 
-/// Narrows the lists on the Tasks page by how a task repeats.
+/// Narrows the lists on the Tasks page by kind.
 enum TaskFilter: Hashable {
-    case all, once, routine
+    case all, main, secondary
 
     func matches(_ task: TaskRecord) -> Bool {
         switch self {
         case .all: return true
-        case .once:
-            if case .weekly? = task.repetition { return false }
-            if case .monthly? = task.repetition { return false }
-            return true   // a dated task, or "anytime until done"
-        case .routine:
-            if case .weekly? = task.repetition { return true }
-            if case .monthly? = task.repetition { return true }
-            return false
+        case .main: return task.kind == .main
+        case .secondary: return task.kind == .secondary
         }
     }
 }
@@ -62,12 +56,10 @@ struct TasksView: View {
         }
     }
 
-    @State private var segment: TaskKind = .main
     @State private var filter: TaskFilter = .all
     @State private var now = Date()
     @State private var editor: EditorTarget?
     @State private var upcomingExpanded = false
-    @State private var editMode: EditMode = .inactive
     @State private var undoToken: TaskDeletion?
     @State private var undoDismiss: Task<Void, Never>?
 
@@ -81,19 +73,24 @@ struct TasksView: View {
         )
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
         let doneEver = Set(completions.map(\.taskID))
+        let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
         let mainToday = todayTasks(.main, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
-        let list = (segment == .main
-            ? mainToday
-            : todayTasks(.secondary, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar))
+        let secondaryToday = todayTasks(.secondary, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
+        let list = sortedByTime(
+            (mainToday + secondaryToday).filter(filter.matches),
+            day: snapshot.today, provider: provider, calendar: calendar
+        )
+        let upcoming = (upcomingTasks(.main, today: snapshot.today) + upcomingTasks(.secondary, today: snapshot.today))
             .filter(filter.matches)
-        let upcoming = upcomingTasks(segment, today: snapshot.today).filter(filter.matches)
+            .sorted { $0.startDay < $1.startDay }
+        let newKind: TaskKind = filter == .secondary ? .secondary : .main
 
-        CurvedPage(title: "المهمات", scrollable: false, onAdd: { editor = .new(segment) }) {
+        CurvedPage(title: "المهمات", scrollable: false, onAdd: { editor = .new(newKind) }) {
             VStack(spacing: 0) {
             Picker("تصفية المهمات", selection: $filter) {
                 Text("الكل").tag(TaskFilter.all)
-                Text("مهمات لمرة واحدة").tag(TaskFilter.once)
-                Text("مهمات روتينية").tag(TaskFilter.routine)
+                Text("المهمات الرئيسية").tag(TaskFilter.main)
+                Text("المهمات الفرعية").tag(TaskFilter.secondary)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 20)
@@ -114,40 +111,15 @@ struct TasksView: View {
                 }
 
                 Section {
-                    Picker("نوع المهمات", selection: $segment) {
-                        Text("رئيسية").tag(TaskKind.main)
-                        Text("فرعية").tag(TaskKind.secondary)
-                    }
-                    .pickerStyle(.segmented)
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-                }
-
-                Section {
                     if list.isEmpty {
                         emptyState
                     } else {
                         ForEach(list) { task in
                             row(task, isDone: doneToday.contains(task.id), snapshot: snapshot)
                         }
-                        .onMove { source, destination in
-                            TaskActions.move(displayed: list, from: source, to: destination, allTasks: tasks, context: context)
-                        }
                     }
                 } header: {
-                    HStack {
-                        Text(segment == .main ? "مهمات اليوم الرئيسية" : "مهمات اليوم الفرعية")
-                        Spacer()
-                        if list.count > 1 {
-                            Button(editMode.isEditing ? "تم" : "ترتيب") {
-                                withAnimation { editMode = editMode.isEditing ? .inactive : .active }
-                            }
-                            .font(.subheadline.bold())
-                            .foregroundStyle(Theme.primaryStrong)
-                            .textCase(nil)
-                            .frame(minHeight: 44)
-                        }
-                    }
+                    Text(headerTitle)
                 }
                 .listRowBackground(Theme.card)
 
@@ -180,7 +152,6 @@ struct TasksView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .contentMargins(.bottom, Metrics.homeRingDiameter / 2 + 8, for: .scrollContent)
-            .environment(\.editMode, $editMode)
             }
         }
         .overlay(alignment: .bottom) {
@@ -236,11 +207,11 @@ struct TasksView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Text(filter != .all ? "ما فيه مهمات بهذا الفلتر اليوم" : (segment == .main ? "ما عندك مهمات رئيسية اليوم — أضف أول مهمة" : "ما عندك مهمات فرعية اليوم"))
+            Text(filter == .secondary ? "ما عندك مهمات فرعية اليوم" : (filter == .main ? "ما عندك مهمات رئيسية اليوم — أضف أول مهمة" : "ما عندك مهمات اليوم — أضف أول مهمة"))
                 .font(.body)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
-            Button("إضافة مهمة") { editor = .new(segment) }
+            Button("إضافة مهمة") { editor = .new(filter == .secondary ? .secondary : .main) }
                 .buttonStyle(.borderedProminent)
                 .font(.headline)
         }
@@ -322,6 +293,22 @@ struct TasksView: View {
             }
             return task.spec.isScheduled(on: today, calendar: calendar)
         }
+    }
+
+    private var headerTitle: LocalizedStringKey {
+        switch filter {
+        case .all: return "مهمات اليوم"
+        case .main: return "مهمات اليوم الرئيسية"
+        case .secondary: return "مهمات اليوم الفرعية"
+        }
+    }
+
+    /// Earliest due time first; tasks without a time keep their order at the end.
+    private func sortedByTime(_ items: [TaskRecord], day: DayKey, provider: PrayerTimeProviding?, calendar: Calendar) -> [TaskRecord] {
+        items.enumerated()
+            .map { (index: $0.offset, task: $0.element, due: $0.element.dueDate(on: day, provider: provider, calendar: calendar) ?? .distantFuture) }
+            .sorted { $0.due == $1.due ? $0.index < $1.index : $0.due < $1.due }
+            .map { $0.task }
     }
 
     /// One-off tasks dated after today.

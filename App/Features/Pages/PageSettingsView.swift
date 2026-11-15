@@ -19,7 +19,7 @@ struct PageSettingsView: View {
             get: { page.schedule != nil },
             set: { on in
                 if on {
-                    page.schedule = PageSchedule(repetition: .weekly(Set(Weekday.allCases)), time: .clock(hour: 18, minute: 0))
+                    page.schedule = PageSchedule(repetition: .weekly(Set(Weekday.allCases)), time: .currentClock())
                 } else {
                     page.schedule = nil
                     page.isMainTask = false
@@ -31,7 +31,7 @@ struct PageSettingsView: View {
 
     private var scheduleBinding: Binding<PageSchedule> {
         Binding(
-            get: { page.schedule ?? PageSchedule(repetition: .daily, time: .clock(hour: 18, minute: 0)) },
+            get: { page.schedule ?? PageSchedule(repetition: .daily, time: .currentClock()) },
             set: { page.schedule = $0 }
         )
     }

@@ -49,8 +49,7 @@ struct AlarmEditorView: View {
         self.target = target
         let calendar = Calendar.app
         if case .new = target {
-            let base = calendar.date(bySettingHour: 7, minute: 0, second: 0, of: Date()) ?? Date()
-            _clockTime = State(initialValue: base)
+            _clockTime = State(initialValue: Date())
         }
         guard case .edit(let alarm) = target else { return }
         _title = State(initialValue: alarm.title)

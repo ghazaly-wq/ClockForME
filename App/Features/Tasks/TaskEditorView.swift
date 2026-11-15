@@ -26,7 +26,7 @@ struct TaskEditorView: View {
     @State private var notes = ""
     // The alarm made from inside the task (time, prayers, ringing or notification only).
     @State private var alarmEnabled = false
-    @State private var alarmSchedule = PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0))
+    @State private var alarmSchedule = PageSchedule(repetition: .daily, time: .currentClock())
     /// The alarm already linked to the task being edited.
     @State private var linkedAlarm: AlarmRecord?
     @State private var alarmLoaded = false
