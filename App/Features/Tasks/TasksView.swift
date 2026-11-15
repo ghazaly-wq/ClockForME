@@ -45,6 +45,7 @@ struct TasksView: View {
     @Query(sort: [SortDescriptor(\TaskRecord.sortOrder), SortDescriptor(\TaskRecord.createdAt)])
     private var tasks: [TaskRecord]
     @Query private var completions: [CompletionRecord]
+    @Query private var alarms: [AlarmRecord]
 
     @State private var segment: TaskKind = .main
     @State private var filter: TaskFilter = .all
@@ -52,7 +53,7 @@ struct TasksView: View {
     @State private var editor: EditorTarget?
     @State private var upcomingExpanded = false
     @State private var editMode: EditMode = .inactive
-    @State private var undoToken: DeleteUndo?
+    @State private var undoToken: TaskDeletion?
     @State private var undoDismiss: Task<Void, Never>?
 
     private let ticker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -204,7 +205,7 @@ struct TasksView: View {
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                showUndo(TaskActions.delete(task, completions: completions, context: context, today: snapshot.today))
+                showUndo(AlarmActions.deleteTask(task, alarms: alarms, completions: completions, context: context, today: snapshot.today))
             } label: {
                 Label("حذف", systemImage: "trash")
             }
@@ -249,13 +250,13 @@ struct TasksView: View {
 
     // MARK: - Undo
 
-    private func undoToast(_ token: DeleteUndo) -> some View {
+    private func undoToast(_ token: TaskDeletion) -> some View {
         HStack(spacing: 12) {
             Text("تم حذف المهمة")
                 .font(.subheadline.bold())
                 .foregroundStyle(Theme.textPrimary)
             Button("تراجع") {
-                TaskActions.undoDelete(token, context: context)
+                AlarmActions.undoDeleteTask(token, context: context)
                 undoDismiss?.cancel()
                 undoToken = nil
             }
@@ -270,7 +271,7 @@ struct TasksView: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
-    private func showUndo(_ token: DeleteUndo) {
+    private func showUndo(_ token: TaskDeletion) {
         undoToken = token
         AccessibilityNotification.Announcement(String(localized: "تم حذف المهمة")).post()
         undoDismiss?.cancel()

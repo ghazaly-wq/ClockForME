@@ -11,6 +11,12 @@ struct DeletedAlarmSnapshot {
     let taskIDs: [UUID]
 }
 
+/// A task delete from the Tasks list, plus the alarm that went with it (if any).
+struct TaskDeletion {
+    let taskUndo: DeleteUndo
+    let alarm: DeletedAlarmSnapshot?
+}
+
 @MainActor
 enum AlarmActions {
     // MARK: - Linking alarms with main tasks
@@ -118,6 +124,39 @@ enum AlarmActions {
         for undo in snapshot.taskUndos { TaskActions.undoDelete(undo, context: context) }
         let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
         for task in tasks where snapshot.taskIDs.contains(task.id) { task.alarmID = snapshot.rule.id }
+        try? context.save()
+    }
+
+    // MARK: - Deleting a task that came from an alarm
+
+    /// Deleting a task from the Tasks list also deletes the alarm it was made from.
+    static func deleteTask(
+        _ task: TaskRecord,
+        alarms: [AlarmRecord],
+        completions: [CompletionRecord],
+        context: ModelContext,
+        today: DayKey
+    ) -> TaskDeletion {
+        var alarmSnapshot: DeletedAlarmSnapshot?
+        if let alarmID = task.alarmID, let alarm = alarms.first(where: { $0.id == alarmID }) {
+            alarmSnapshot = DeletedAlarmSnapshot(rule: alarm.rule, createdAt: alarm.createdAt, taskUndos: [], taskIDs: [task.id])
+            AlarmScheduler.cancelAll(forRule: alarm.id)
+            context.delete(alarm)
+        }
+        let undo = TaskActions.delete(task, completions: completions, context: context, today: today)
+        try? context.save()
+        return TaskDeletion(taskUndo: undo, alarm: alarmSnapshot)
+    }
+
+    static func undoDeleteTask(_ deletion: TaskDeletion, context: ModelContext) {
+        if let alarm = deletion.alarm {
+            context.insert(AlarmRecord(rule: alarm.rule, createdAt: alarm.createdAt))
+        }
+        TaskActions.undoDelete(deletion.taskUndo, context: context)
+        if let alarm = deletion.alarm {
+            let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
+            for task in tasks where alarm.taskIDs.contains(task.id) { task.alarmID = alarm.rule.id }
+        }
         try? context.save()
     }
 
