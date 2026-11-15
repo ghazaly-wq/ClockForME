@@ -19,7 +19,7 @@ struct RootView: View {
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var visited: Set<AppTab> = [.home]
+    @State private var pageWidth: CGFloat = 393
     @State private var dragX: CGFloat = 0
     @State private var refreshTick = 0
 
@@ -87,20 +87,23 @@ struct RootView: View {
 
         ZStack {
             Theme.surface.ignoresSafeArea()
-            // Every visited tab stays alive (hidden ones keep their scroll position, open page and
-            // segment), and switching is a quick cross-dissolve.
+            // The five tabs are laid out side by side like pages of a book (the bar's order, right to left).
+            // Dragging from a screen edge moves the pages with the finger, so half of each shows;
+            // tapping a tab slides to it. All tabs stay alive, so each keeps its own state.
+            // With Reduce Motion the pages cross-fade in place instead.
             ZStack {
-              ForEach(AppTab.allCases) { tab in
-                if visited.contains(tab) || tab == router.selectedTab {
+                ForEach(AppTab.allCases) { tab in
+                    let isCurrent = tab == router.selectedTab
                     page(for: tab)
-                        .offset(x: tab == router.selectedTab ? dragX : 0)
-                        .opacity(tab == router.selectedTab ? 1 : 0)
-                        .allowsHitTesting(tab == router.selectedTab)
-                        .accessibilityHidden(tab != router.selectedTab)
+                        .background(Theme.surface)
+                        .offset(x: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX)
+                        .opacity(reduceMotion && !isCurrent ? 0 : 1)
+                        .allowsHitTesting(isCurrent)
+                        .accessibilityHidden(!isCurrent)
                 }
-              }
             }
-            .animation(reduceMotion ? .easeInOut(duration: 0.12) : .easeInOut(duration: 0.2), value: router.selectedTab)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = max($0, 1) }
+            .animation(reduceMotion ? .easeInOut(duration: 0.15) : .smooth(duration: 0.38), value: router.selectedTab)
             .overlay(alignment: .leading) { edgeSwipeStrip }
             .overlay(alignment: .trailing) { edgeSwipeStrip }
 
@@ -110,7 +113,6 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: router.showDayComplete)
-        .onChange(of: router.selectedTab, initial: true) { _, tab in visited.insert(tab) }
         .sheet(item: $router.unlock, onDismiss: { router.unlockSheetClosed() }) { info in
             AchievementUnlockSheet(info: info)
                 .appRoot()
@@ -159,27 +161,31 @@ struct RootView: View {
         }
     }
 
-    /// A thin strip on each screen edge: dragging inward from it moves to the next tab in the bar.
+    /// A thin strip on each screen edge: dragging inward from it pages to the next tab in the bar.
     /// Starting at the edge keeps it from fighting row swipe actions, chip scrolls, charts or sliders.
-    /// The screen follows the finger a little (damped) and the switch happens past a threshold.
     private var edgeSwipeStrip: some View {
         Color.clear
-            .frame(width: 18)
+            .frame(width: 24)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 12)
+                DragGesture(minimumDistance: 10)
                     .onChanged { value in
-                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                        let limit: CGFloat = 60
-                        dragX = max(-limit, min(limit, value.translation.width * 0.3))
+                        let dx = value.translation.width
+                        guard abs(dx) > abs(value.translation.height) else { return }
+                        // Finger moving left shows the tab to the right of this one, and vice versa.
+                        let hasNext = router.selectedTab.neighbor(dx < 0 ? -1 : 1) != nil
+                        dragX = hasNext ? dx : dx * 0.25   // rubber band at the ends
                     }
                     .onEnded { value in
-                        let dx = value.translation.width, dy = value.translation.height
-                        let commit = abs(dx) > 70 && abs(dx) > abs(dy) * 1.5
-                        withAnimation(.smooth(duration: 0.25)) { dragX = 0 }
-                        // Finger moving left: the tab to the right of this one, and vice versa.
-                        if commit, let next = router.selectedTab.neighbor(dx < 0 ? -1 : 1) {
-                            router.selectedTab = next
+                        let dx = value.translation.width
+                        let predicted = value.predictedEndTranslation.width
+                        let horizontal = abs(dx) > abs(value.translation.height)
+                        let next = router.selectedTab.neighbor(dx < 0 ? -1 : 1)
+                        let commit = horizontal && next != nil
+                            && (abs(dx) > pageWidth * 0.3 || abs(predicted) > pageWidth * 0.55)
+                        withAnimation(reduceMotion ? .easeInOut(duration: 0.15) : .smooth(duration: 0.38)) {
+                            dragX = 0
+                            if commit, let next { router.selectedTab = next }
                         }
                     }
             )
