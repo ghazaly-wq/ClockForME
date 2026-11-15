@@ -1,102 +1,152 @@
 {
   "sourceLanguage": "ar",
   "strings": {
-    "الرئيسية": {
+    "14 نوفمبر 2026 · 2 جمادى الأولى 1448": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الرئيسية"
+            "value": "14 نوفمبر 2026 · 2 جمادى الأولى 1448"
           }
         }
       }
     },
-    "المهمات": {
+    "، ": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "المهمات"
+            "value": "، "
           }
         }
       }
     },
-    "التنبيهات": {
+    "أسبوعي": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "التنبيهات"
+            "value": "أسبوعي"
           }
         }
       }
     },
-    "الإنجازات": {
+    "أسطورة": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الإنجازات"
+            "value": "أسطورة"
           }
         }
       }
     },
-    "صفحاتي": {
+    "أنجزت كل مهماتك اليوم 🎉": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "صفحاتي"
+            "value": "أنجزت كل مهماتك اليوم 🎉"
           }
         }
       }
     },
-    "الإعدادات": {
+    "إذا أنجزت كل مهماتك الرئيسية في اليوم، يزيد الستريك. وإذا أنجزت جزءاً منها، يثبت. وإذا ما أنجزت شيئاً، تبدأ عدّ 3 أيام، وبعدها ينقص الستريك واحد كل يوم.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الإعدادات"
+            "value": "إذا أنجزت كل مهماتك الرئيسية في اليوم، يزيد الستريك. وإذا أنجزت جزءاً منها، يثبت. وإذا ما أنجزت شيئاً، تبدأ عدّ 3 أيام، وبعدها ينقص الستريك واحد كل يوم."
           }
         }
       }
     },
-    "المظهر": {
+    "إذا الشهر ما فيه اليوم المختار (مثل 31)، تنفذ المهمة في آخر يوم من الشهر.": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "المظهر"
+            "value": "إذا الشهر ما فيه اليوم المختار (مثل 31)، تنفذ المهمة في آخر يوم من الشهر."
           }
         }
       }
     },
-    "تلقائي": {
+    "إضافة": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تلقائي"
+            "value": "إضافة"
           }
         }
       }
     },
-    "فاتح": {
+    "إضافة مهمة": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "فاتح"
+            "value": "إضافة مهمة"
           }
         }
       }
     },
-    "داكن": {
+    "إكمال المهمة": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "داكن"
+            "value": "إكمال المهمة"
+          }
+        }
+      }
+    },
+    "إلغاء": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء"
+          }
+        }
+      }
+    },
+    "إلغاء الإكمال": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء الإكمال"
+          }
+        }
+      }
+    },
+    "اسم المهمة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اسم المهمة"
+          }
+        }
+      }
+    },
+    "اضغط للتعديل": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغط للتعديل"
+          }
+        }
+      }
+    },
+    "الأحد، الثلاثاء": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأحد، الثلاثاء"
           }
         }
       }
@@ -111,52 +161,212 @@
         }
       }
     },
-    "فحص النظام": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "فحص النظام"
-          }
-        }
-      }
-    },
-    "مجموعة التطبيق (App Group)": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "مجموعة التطبيق (App Group)"
-          }
-        }
-      }
-    },
-    "متصلة": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "متصلة"
-          }
-        }
-      }
-    },
-    "غير متصلة": {
-      "localizations": {
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "غير متصلة"
-          }
-        }
-      }
-    },
     "الإصدار": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
             "value": "الإصدار"
+          }
+        }
+      }
+    },
+    "الإعدادات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات"
+          }
+        }
+      }
+    },
+    "الإنجازات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإنجازات"
+          }
+        }
+      }
+    },
+    "التاريخ": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التاريخ"
+          }
+        }
+      }
+    },
+    "التكرار": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التكرار"
+          }
+        }
+      }
+    },
+    "التنبيهات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التنبيهات"
+          }
+        }
+      }
+    },
+    "الرئيسية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرئيسية"
+          }
+        }
+      }
+    },
+    "الرئيسية تحسب في الستريك وتظهر في شريط يومك.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرئيسية تحسب في الستريك وتظهر في شريط يومك."
+          }
+        }
+      }
+    },
+    "الساعة اللي يبدأ فيها يومك الجديد. مثلاً لو اخترت 03:00، المهمات اللي تنجزها بعد منتصف الليل تحسب لليوم السابق.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الساعة اللي يبدأ فيها يومك الجديد. مثلاً لو اخترت 03:00، المهمات اللي تنجزها بعد منتصف الليل تحسب لليوم السابق."
+          }
+        }
+      }
+    },
+    "الفرعية تعطي نفس الخبرة، لكن ما تأثر على الستريك.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفرعية تعطي نفس الخبرة، لكن ما تأثر على الستريك."
+          }
+        }
+      }
+    },
+    "المظهر": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المظهر"
+          }
+        }
+      }
+    },
+    "المهمات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهمات"
+          }
+        }
+      }
+    },
+    "المهمات والستريك": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهمات والستريك"
+          }
+        }
+      }
+    },
+    "النوع": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النوع"
+          }
+        }
+      }
+    },
+    "اليوم": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم"
+          }
+        }
+      }
+    },
+    "بداية اليوم": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بداية اليوم"
+          }
+        }
+      }
+    },
+    "بدون موعد": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بدون موعد"
+          }
+        }
+      }
+    },
+    "تظهر المهمة لين تنجزها، وما تأثر على الستريك.": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تظهر المهمة لين تنجزها، وما تأثر على الستريك."
+          }
+        }
+      }
+    },
+    "تعديل": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل"
+          }
+        }
+      }
+    },
+    "تعديل المهمة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل المهمة"
+          }
+        }
+      }
+    },
+    "تلقائي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تلقائي"
           }
         }
       }
@@ -171,12 +381,122 @@
         }
       }
     },
+    "حذف": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف"
+          }
+        }
+      }
+    },
+    "حفظ": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حفظ"
+          }
+        }
+      }
+    },
+    "داكن": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "داكن"
+          }
+        }
+      }
+    },
+    "رئيسية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رئيسية"
+          }
+        }
+      }
+    },
+    "شهري": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شهري"
+          }
+        }
+      }
+    },
+    "صفحاتي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صفحاتي"
+          }
+        }
+      }
+    },
     "عاداتي": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
             "value": "عاداتي"
+          }
+        }
+      }
+    },
+    "غير متصلة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير متصلة"
+          }
+        }
+      }
+    },
+    "فاتح": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فاتح"
+          }
+        }
+      }
+    },
+    "فحص النظام": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فحص النظام"
+          }
+        }
+      }
+    },
+    "فرعية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فرعية"
+          }
+        }
+      }
+    },
+    "قدوة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قدوة"
           }
         }
       }
@@ -191,32 +511,222 @@
         }
       }
     },
-    "هنا تظهر مهماتك الرئيسية والفرعية": {
+    "كل شهر: 1، 15": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "هنا تظهر مهماتك الرئيسية والفرعية"
+            "value": "كل شهر: 1، 15"
           }
         }
       }
     },
-    "هنا تظهر منبهاتك وأوقات الصلاة": {
+    "كل يوم": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "هنا تظهر منبهاتك وأوقات الصلاة"
+            "value": "كل يوم"
           }
         }
       }
     },
-    "هنا تظهر إنجازاتك ومستواك وجوائزك": {
+    "ما عندك مهمات رئيسية اليوم": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "هنا تظهر إنجازاتك ومستواك وجوائزك"
+            "value": "ما عندك مهمات رئيسية اليوم"
+          }
+        }
+      }
+    },
+    "ما عندك مهمات رئيسية اليوم — أضف أول مهمة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما عندك مهمات رئيسية اليوم — أضف أول مهمة"
+          }
+        }
+      }
+    },
+    "ما عندك مهمات فرعية اليوم": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ما عندك مهمات فرعية اليوم"
+          }
+        }
+      }
+    },
+    "مبتدئ": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مبتدئ"
+          }
+        }
+      }
+    },
+    "متصلة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متصلة"
+          }
+        }
+      }
+    },
+    "متقن": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متقن"
+          }
+        }
+      }
+    },
+    "مثابر": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مثابر"
+          }
+        }
+      }
+    },
+    "مجموعة التطبيق (App Group)": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجموعة التطبيق (App Group)"
+          }
+        }
+      }
+    },
+    "مرة واحدة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرة واحدة"
+          }
+        }
+      }
+    },
+    "مرة واحدة · 14 نوفمبر": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرة واحدة · 14 نوفمبر"
+          }
+        }
+      }
+    },
+    "مستوى جديد!": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مستوى جديد!"
+          }
+        }
+      }
+    },
+    "ملاحظات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملاحظات"
+          }
+        }
+      }
+    },
+    "ملاحظات (اختياري)": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملاحظات (اختياري)"
+          }
+        }
+      }
+    },
+    "ملخص يومك يظهر هنا": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص يومك يظهر هنا"
+          }
+        }
+      }
+    },
+    "منضبط": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "منضبط"
+          }
+        }
+      }
+    },
+    "مهمات اليوم": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهمات اليوم"
+          }
+        }
+      }
+    },
+    "مهمات اليوم الرئيسية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهمات اليوم الرئيسية"
+          }
+        }
+      }
+    },
+    "مهمات اليوم الفرعية": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهمات اليوم الفرعية"
+          }
+        }
+      }
+    },
+    "مهمة جديدة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهمة جديدة"
+          }
+        }
+      }
+    },
+    "نوع المهمات": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نوع المهمات"
           }
         }
       }
@@ -231,12 +741,42 @@
         }
       }
     },
-    "ملخص يومك يظهر هنا": {
+    "هنا تظهر إنجازاتك وجوائزك": {
       "localizations": {
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ملخص يومك يظهر هنا"
+            "value": "هنا تظهر إنجازاتك وجوائزك"
+          }
+        }
+      }
+    },
+    "هنا تظهر منبهاتك وأوقات الصلاة": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هنا تظهر منبهاتك وأوقات الصلاة"
+          }
+        }
+      }
+    },
+    "ويدجت تجريبي": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ويدجت تجريبي"
+          }
+        }
+      }
+    },
+    "١٢٣": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "١٢٣"
           }
         }
       }

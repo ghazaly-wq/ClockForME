@@ -9,6 +9,16 @@ struct RootView: View {
         ZStack {
             Theme.surface.ignoresSafeArea()
             page(for: router.selectedTab)
+
+            if router.showDayComplete {
+                DayCompleteOverlay()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: router.showDayComplete)
+        .sheet(item: $router.levelUp) { info in
+            LevelUpSheet(info: info)
+                .appRoot()
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             CurvedTabBar(selection: $router.selectedTab)
