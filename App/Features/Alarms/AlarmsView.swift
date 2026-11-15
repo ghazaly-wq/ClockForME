@@ -13,6 +13,9 @@ struct AlarmsView: View {
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @Query(sort: \AlarmRecord.createdAt) private var alarms: [AlarmRecord]
+    @Query private var tasks: [TaskRecord]
+    @Query private var completions: [CompletionRecord]
+    @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
 
     @State private var now = Date()
     @State private var editor: AlarmEditorTarget?
@@ -161,7 +164,10 @@ struct AlarmsView: View {
         .padding(.vertical, 4)
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                showUndo(AlarmActions.delete(alarm, context: context))
+                showUndo(AlarmActions.delete(
+                    alarm, tasks: tasks, completions: completions, context: context,
+                    today: DayKey(date: Date(), calendar: Calendar.app, dayStartHour: dayStartHour)
+                ))
             } label: {
                 Label("حذف", systemImage: "trash")
             }
@@ -178,6 +184,7 @@ struct AlarmsView: View {
             set: { newValue in
                 alarm.isEnabled = newValue
                 try? context.save()
+                if !newValue { AlarmScheduler.cancelAll(forRule: alarm.id) }
                 Task { @MainActor in await AlarmActions.requestAndReplan() }
             }
         )

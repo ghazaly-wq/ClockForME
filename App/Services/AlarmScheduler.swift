@@ -50,6 +50,22 @@ enum AlarmScheduler {
         return manager.authorizationState == .authorized
     }
 
+    // Remembers which of our alarms each AlarmKit alarm belongs to (AlarmKit ids are derived hashes).
+    private static let mapKey = "alarmKitRuleMap"
+
+    private static func loadMap() -> [String: String] {
+        UserDefaults.standard.dictionary(forKey: mapKey) as? [String: String] ?? [:]
+    }
+
+    /// Stops and removes everything AlarmKit holds for one alarm, including a snoozed (counting down) one.
+    static func cancelAll(forRule ruleID: UUID) {
+        let manager = AlarmManager.shared
+        let map = loadMap()
+        for (kitID, rule) in map where rule == ruleID.uuidString {
+            if let id = UUID(uuidString: kitID) { try? manager.cancel(id: id) }
+        }
+    }
+
     /// Makes AlarmKit's scheduled alarms match the plan: cancels stale ones, adds missing ones.
     /// Alarms that are ringing, snoozed or paused are never touched.
     static func replan(alarms: [AlarmRule], location: PrayerLocation?, now: Date = Date()) async {
@@ -72,9 +88,20 @@ enum AlarmScheduler {
         }
 
         let existing = (try? manager.alarms) ?? []
-        for alarm in existing where alarm.state == .scheduled && wanted[alarm.id] == nil {
-            try? manager.cancel(id: alarm.id)
+        let knownRules = Set(alarms.map { $0.id.uuidString })
+        var map = loadMap()
+        for alarm in existing where wanted[alarm.id] == nil {
+            if alarm.state == .scheduled {
+                try? manager.cancel(id: alarm.id)
+            } else if let owner = map[alarm.id.uuidString], !knownRules.contains(owner) {
+                // A snoozed or paused alarm whose alarm was deleted.
+                try? manager.cancel(id: alarm.id)
+            }
         }
+        for (id, entry) in wanted { map[id.uuidString] = entry.1.id.uuidString }
+        let live = Set(existing.map { $0.id.uuidString }).union(wanted.keys.map(\.uuidString))
+        map = map.filter { live.contains($0.key) }
+        UserDefaults.standard.set(map, forKey: mapKey)
 
         let existingIDs = Set(existing.map(\.id))
         let missing = wanted.filter { !existingIDs.contains($0.key) }

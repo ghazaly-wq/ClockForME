@@ -6,6 +6,9 @@ import SwiftData
 struct DeletedAlarmSnapshot {
     let rule: AlarmRule
     let createdAt: Date
+    /// Deleting a main-task alarm also removes its task; these bring it back.
+    let taskUndos: [DeleteUndo]
+    let taskIDs: [UUID]
 }
 
 @MainActor
@@ -85,9 +88,23 @@ enum AlarmActions {
 
     // MARK: - Delete / undo
 
-    /// Deleting an alarm keeps its task (still linked by id), so undo restores everything.
-    static func delete(_ alarm: AlarmRecord, context: ModelContext) -> DeletedAlarmSnapshot {
-        let snapshot = DeletedAlarmSnapshot(rule: alarm.rule, createdAt: alarm.createdAt)
+    /// Deleting an alarm also removes the main task linked to it (a task with history is only
+    /// stopped from today, like any delete) and cancels anything AlarmKit still holds, even a snoozed alarm.
+    static func delete(
+        _ alarm: AlarmRecord,
+        tasks: [TaskRecord],
+        completions: [CompletionRecord],
+        context: ModelContext,
+        today: DayKey
+    ) -> DeletedAlarmSnapshot {
+        var undos: [DeleteUndo] = []
+        var ids: [UUID] = []
+        for task in tasks where task.alarmID == alarm.id && task.endDay == nil {
+            ids.append(task.id)
+            undos.append(TaskActions.delete(task, completions: completions, context: context, today: today))
+        }
+        let snapshot = DeletedAlarmSnapshot(rule: alarm.rule, createdAt: alarm.createdAt, taskUndos: undos, taskIDs: ids)
+        AlarmScheduler.cancelAll(forRule: alarm.id)
         context.delete(alarm)
         try? context.save()
         return snapshot
@@ -95,6 +112,9 @@ enum AlarmActions {
 
     static func undoDelete(_ snapshot: DeletedAlarmSnapshot, context: ModelContext) {
         context.insert(AlarmRecord(rule: snapshot.rule, createdAt: snapshot.createdAt))
+        for undo in snapshot.taskUndos { TaskActions.undoDelete(undo, context: context) }
+        let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
+        for task in tasks where snapshot.taskIDs.contains(task.id) { task.alarmID = snapshot.rule.id }
         try? context.save()
     }
 
