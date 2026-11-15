@@ -5,7 +5,7 @@ import UIKit
 
 /// Stores photos picked for image blocks inside the app's Documents folder (private to the app, kept in backups).
 enum PageImageStore {
-    private static var folder: URL {
+    static var folder: URL {
         let base = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let url = base.appendingPathComponent("PageImages", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

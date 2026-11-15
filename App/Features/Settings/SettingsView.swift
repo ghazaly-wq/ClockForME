@@ -1,8 +1,13 @@
 import HabitCore
+import SwiftData
 import SwiftUI
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @AppStorage(SettingsKey.signatureReminderEnabled) private var signatureReminder = true
+    @State private var confirmReset = false
+    @State private var confirmResetFinal = false
     @AppStorage(SettingsKey.appearance) private var appearanceRaw = AppearanceMode.system.rawValue
     @AppStorage(SettingsKey.digitStyle) private var digitRaw = DigitStyle.western.rawValue
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
@@ -88,6 +93,26 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
 
+                Section {
+                    NavigationLink("النسخ الاحتياطي") { BackupView() }
+                } header: {
+                    Text("بياناتك")
+                } footer: {
+                    Text("كل بياناتك على الجوال بس. خذ نسخة احتياطية من وقت لوقت.")
+                }
+
+                Section {
+                    LabeledContent("ينتهي التوقيع") {
+                        Text(signatureText)
+                            .foregroundStyle(signatureLow ? Theme.danger : Theme.textPrimary)
+                    }
+                    Toggle("نذكّرني قبل الانتهاء بيوم", isOn: $signatureReminder)
+                } header: {
+                    Text("توقيع التطبيق")
+                } footer: {
+                    Text("التطبيق الموقّع بحساب مجاني ينتهي كل 7 أيام. خل AltServer شغال على الكمبيوتر والجوال على نفس الواي فاي عشان AltStore يجدده تلقائي. أو افتح AltStore على الجوال واضغط «تجديد».")
+                }
+
                 Section("فحص النظام") {
                     LabeledContent("مجموعة التطبيق (App Group)") {
                         Text(appGroupConnected ? LocalizedStringKey("متصلة") : LocalizedStringKey("غير متصلة"))
@@ -96,6 +121,28 @@ struct SettingsView: View {
                         Text(versionText)
                     }
                 }
+
+                Section {
+                    Button("إعادة ضبط كل البيانات", role: .destructive) { confirmReset = true }
+                        .frame(minHeight: 44)
+                } footer: {
+                    Text("يحذف كل المهمات والتنبيهات والصفحات والإنجازات والنقاط ويرجع الإعدادات للافتراضي. ما يمديك ترجعها إلا من نسخة احتياطية.")
+                }
+            }
+            .confirmationDialog("تحذف كل بياناتك؟", isPresented: $confirmReset, titleVisibility: .visible) {
+                Button("متابعة", role: .destructive) { confirmResetFinal = true }
+                Button("إلغاء", role: .cancel) {}
+            } message: {
+                Text("بتنحذف المهمات والتنبيهات والصفحات والإنجازات والنقاط.")
+            }
+            .alert("متأكد 100٪؟", isPresented: $confirmResetFinal) {
+                Button("احذف كل شي", role: .destructive) { resetEverything() }
+                Button("إلغاء", role: .cancel) {}
+            } message: {
+                Text("هذا ما يتراجع عنه. لو عندك نسخة احتياطية ما عليك.")
+            }
+            .onChange(of: signatureReminder) { _, on in
+                Task { await SignatureInfo.rescheduleReminder(askPermission: on) }
             }
             .onChange(of: morningEnabled) { _, _ in refreshMorning() }
             .onChange(of: morningHour) { _, _ in refreshMorning() }
@@ -109,6 +156,26 @@ struct SettingsView: View {
             }
         }
         .appRoot()
+    }
+
+    private var signatureText: String {
+        guard let days = SignatureInfo.daysLeft() else { return String(localized: "غير معروف") }
+        if days == 0 { return String(localized: "منتهي، جدّده من AltStore") }
+        return digits.format(String(localized: "بعد \(days) يوم"))
+    }
+
+    private var signatureLow: Bool {
+        guard let days = SignatureInfo.daysLeft() else { return false }
+        return days <= 1
+    }
+
+    private func resetEverything() {
+        do {
+            try BackupService.resetAll(context: context)
+            Task { await AlarmActions.replan(container: AppEnvironment.shared.container) }
+        } catch {
+            // Nothing was deleted if the fetch/delete failed before saving; the owner can try again.
+        }
     }
 
     private func refreshMorning() {

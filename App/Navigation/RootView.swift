@@ -173,6 +173,11 @@ struct RootView: View {
         .task {
             await LiveActivityController.shared.updateMorningReminder()
         }
+        // Weekly automatic backup and the "renew from AltStore" reminder.
+        .task {
+            BackupService.runAutoBackupIfDue(context: context)
+            await SignatureInfo.rescheduleReminder()
+        }
         // The widget extension reads the theme from the App Group defaults.
         .task(id: equippedTheme) {
             Theme.mirrorThemeToSharedDefaults(equippedTheme)
@@ -187,6 +192,8 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshTick += 1
+                BackupService.runAutoBackupIfDue(context: context)
+                Task { await SignatureInfo.rescheduleReminder() }
             } else if phase == .background {
                 AppDelegate.scheduleBackgroundRefresh()
             }
