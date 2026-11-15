@@ -17,12 +17,13 @@ struct RootView: View {
     @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
+    @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
     @State private var refreshTick = 0
 
     /// Anything that should make the notification plan be rebuilt.
     private var replanKey: String {
         let alarmPart = alarms.map(\.fingerprint).sorted().joined(separator: ";")
-        return "\(alarmPart)#\(hasLocation)#\(latitude)#\(longitude)#\(refreshTick)"
+        return "\(alarmPart)#\(hasLocation)#\(latitude)#\(longitude)#\(alarmSound)#\(refreshTick)"
     }
 
     /// Anything that changes what the widgets and the Live Activity show.

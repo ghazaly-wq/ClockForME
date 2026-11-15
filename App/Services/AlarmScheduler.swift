@@ -157,12 +157,12 @@ enum AlarmScheduler {
             attributes: attributes,
             stopIntent: OpenHabitsIntent(showTasks: rule.isMainTask, pageID: rule.linkedPageID?.uuidString ?? ""),
             secondaryIntent: nil,
-            sound: .default
+            sound: AlarmSoundStore.alertSound
         )
     }
 
     private static func fingerprint(of rule: AlarmRule) -> String {
-        "\(rule.title)|\(rule.isMainTask)|\(rule.linkedPageID?.uuidString ?? "")"
+        "\(rule.title)|\(rule.isMainTask)|\(rule.linkedPageID?.uuidString ?? "")|\(AlarmSoundStore.selectedName)"
     }
 
     /// The same alarm moment + same text always gives the same id, so re-planning is a cheap diff.

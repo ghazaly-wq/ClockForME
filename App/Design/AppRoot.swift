@@ -20,6 +20,8 @@ enum SettingsKey {
     static let morningEnabled = "morningReminderEnabled"
     static let morningHour = "morningReminderHour"
     static let morningMinute = "morningReminderMinute"
+    /// File name of the imported alarm sound in Library/Sounds; empty = system default.
+    static let alarmSound = "alarmSoundName"
 }
 
 extension AppearanceMode {

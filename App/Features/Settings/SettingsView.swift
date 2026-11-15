@@ -46,6 +46,10 @@ struct SettingsView: View {
                     Text(digits.format(String(localized: "الساعة اللي يبدأ فيها يومك الجديد. مثلاً لو اخترت 03:00، المهمات اللي تنجزها بعد منتصف الليل تحسب لليوم السابق.")))
                 }
 
+                Section("المنبه") {
+                    NavigationLink("صوت المنبه") { AlarmSoundView() }
+                }
+
                 Section {
                     NavigationLink("الصلاة والموقع") { PrayerSettingsView() }
                     TodayPrayersRows()
