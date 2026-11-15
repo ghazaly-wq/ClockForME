@@ -4,6 +4,8 @@ import SwiftUI
 /// Tabs navigate (never act), have Arabic labels, and give selection haptics.
 struct CurvedTabBar: View {
     @Binding var selection: AppTab
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var gooRunning = false
 
     // Right-to-left layout: the first item of an HStack sits on the right.
     private let rightTabs: [AppTab] = [.tasks, .alarms]
@@ -15,17 +17,18 @@ struct CurvedTabBar: View {
                 .fill(Theme.barMuted)
                 .ignoresSafeArea(edges: .bottom)
 
-            // Tabs sit on the arc: lower and tilted toward the sides, following the bar's curve.
+            // Liquid green blob behind the selected tab (or pooled under Home), then the tabs on the arc.
             GeometryReader { geo in
                 let w = geo.size.width
                 let slot = (w - Metrics.homeRingDiameter) / 4
-                GlassEffectContainer(spacing: 8) {
-                    ZStack(alignment: .topLeading) {
-                        arcTab(.tasks, x: w - slot * 0.5, width: w)
-                        arcTab(.alarms, x: w - slot * 1.5, width: w)
-                        arcTab(.achievements, x: slot * 1.5, width: w)
-                        arcTab(.pages, x: slot * 0.5, width: w)
-                    }
+                ZStack(alignment: .topLeading) {
+                    GooBlob(selection: selection, width: w, running: gooRunning, reduceMotion: reduceMotion)
+                        .clipShape(BottomBarArcShape())
+                        .allowsHitTesting(false)
+                    arcTab(.tasks, x: w - slot * 0.5, width: w)
+                    arcTab(.alarms, x: w - slot * 1.5, width: w)
+                    arcTab(.achievements, x: slot * 1.5, width: w)
+                    arcTab(.pages, x: slot * 0.5, width: w)
                 }
             }
             .frame(height: Metrics.barHeight)
@@ -37,6 +40,13 @@ struct CurvedTabBar: View {
         // Keep the bar usable at accessibility text sizes.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .sensoryFeedback(.selection, trigger: selection)
+        .onChange(of: selection) {
+            gooRunning = true
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1.6))
+                gooRunning = false
+            }
+        }
     }
 
     /// Places a tab at `x`, on the same quadratic arc as `BottomBarArcShape`:
@@ -66,14 +76,9 @@ struct CurvedTabBar: View {
                 Text(tab.title)
                     .font(.caption2.weight(.semibold))
             }
-            .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.85))
+            .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.8))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .glassEffect(
-                isSelected ? .regular.tint(Theme.primary.opacity(0.9)).interactive() : .regular.interactive(),
-                in: Capsule()
-            )
-            .padding(.horizontal, 3)
-            .contentShape(Capsule())
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -100,5 +105,79 @@ struct CurvedTabBar: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(AppTab.home.title))
         .accessibilityAddTraits(selection == .home ? .isSelected : [])
+    }
+}
+
+
+/// Spring state for the liquid blobs. A bouncy lead blob and a softer trailing blob chase the same target;
+/// drawn together through a blur + alpha threshold they stretch and snap together like a liquid.
+private final class GooSim {
+    struct Body { var p = SIMD3<Double>(0, 0, 0); var v = SIMD3<Double>(0, 0, 0) }
+    var lead = Body()
+    var tail = Body()
+    var ready = false
+    var last: Date?
+
+    func step(now: Date, target: SIMD3<Double>, snap: Bool) {
+        if !ready || snap {
+            lead = Body(p: target); tail = Body(p: target); ready = true; last = now; return
+        }
+        let dt = min(max(now.timeIntervalSince(last ?? now), 0), 1.0 / 30.0)
+        last = now
+        integrate(&lead, target: target, k: 280, c: 13, dt: dt)
+        integrate(&tail, target: target, k: 85, c: 15, dt: dt)
+    }
+
+    private func integrate(_ b: inout Body, target: SIMD3<Double>, k: Double, c: Double, dt: Double) {
+        let a = (target - b.p) * k - b.v * c
+        b.v += a * dt
+        b.p += b.v * dt
+    }
+}
+
+private struct GooBlob: View {
+    let selection: AppTab
+    let width: CGFloat
+    let running: Bool
+    let reduceMotion: Bool
+    @State private var sim = GooSim()
+
+    private func target() -> SIMD3<Double> {
+        let w = Double(width)
+        let slot = (w - Double(Metrics.homeRingDiameter)) / 4
+        let rise = Double(Metrics.barRise)
+        func onArc(_ x: Double) -> SIMD3<Double> {
+            let u = x / w
+            return SIMD3(x, rise * pow(1 - 2 * u, 2) + 35, 30)
+        }
+        switch selection {
+        case .tasks: return onArc(w - slot * 0.5)
+        case .alarms: return onArc(w - slot * 1.5)
+        case .achievements: return onArc(slot * 1.5)
+        case .pages: return onArc(slot * 0.5)
+        case .home: return SIMD3(w / 2, 14, 46)   // pooled under the Home button
+        }
+    }
+
+    var body: some View {
+        TimelineView(.animation(paused: !running && sim.ready)) { timeline in
+            Canvas { ctx, size in
+                sim.step(now: timeline.date, target: target(), snap: reduceMotion)
+                ctx.addFilter(.alphaThreshold(min: 0.5, color: Theme.primary))
+                ctx.addFilter(.blur(radius: 9))
+                ctx.drawLayer { layer in
+                    for b in [sim.lead, sim.tail] {
+                        let r = max(b.p.z, 4)
+                        layer.fill(Path(ellipseIn: CGRect(x: b.p.x - r, y: b.p.y - r, width: r * 2, height: r * 2)),
+                                   with: .color(.white))
+                        // Pillar down to the bottom edge, so the green fills the bar like in the sketch.
+                        layer.fill(Path(CGRect(x: b.p.x - r * 0.8, y: b.p.y, width: r * 1.6, height: size.height + 40)),
+                                   with: .color(.white))
+                    }
+                }
+            }
+        }
+        .frame(height: Metrics.barHeight)
+        .ignoresSafeArea(edges: .bottom)
     }
 }
