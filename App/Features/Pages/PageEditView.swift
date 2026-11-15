@@ -132,8 +132,9 @@ struct PageEditView: View {
     }
 
     private func actionsMenu(_ block: Block, parent: UUID?, index: Int, count: Int) -> some View {
-        let containers = blocks.flattened.filter {
-            $0.kind == .container && $0.id != block.id && !block.children.flattened.contains(where: { child in child.id == $0.id })
+        let descendantIDs = Set(block.children.flattened.map(\.id))
+        let containers = blocks.flattened.filter { candidate in
+            candidate.kind == .container && candidate.id != block.id && !descendantIDs.contains(candidate.id)
         }
         return Menu {
             Button { move(block.id, parent: parent, from: index, delta: -1) } label: {
