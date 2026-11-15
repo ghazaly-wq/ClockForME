@@ -96,7 +96,7 @@ struct RootView: View {
                     let isCurrent = tab == router.selectedTab
                     page(for: tab)
                         .background(Theme.surface)
-                        .transformEffect(.init(translationX: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX, y: 0))
+                        .offset(x: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX)
                         .opacity(reduceMotion && !isCurrent ? 0 : 1)
                         .allowsHitTesting(isCurrent)
                         .accessibilityHidden(!isCurrent)
@@ -170,15 +170,16 @@ struct RootView: View {
             .gesture(
                 DragGesture(minimumDistance: 10)
                     .onChanged { value in
-                        let dx = value.translation.width
+                        // The forced RTL environment flips the gesture's x axis, so mirror it back (finger right = positive).
+                        let dx = -value.translation.width
                         guard abs(dx) > abs(value.translation.height) else { return }
                         // Finger moving left shows the tab to the right of this one, and vice versa.
                         let hasNext = router.selectedTab.neighbor(dx < 0 ? -1 : 1) != nil
                         dragX = hasNext ? dx : dx * 0.25   // rubber band at the ends
                     }
                     .onEnded { value in
-                        let dx = value.translation.width
-                        let predicted = value.predictedEndTranslation.width
+                        let dx = -value.translation.width
+                        let predicted = -value.predictedEndTranslation.width
                         let horizontal = abs(dx) > abs(value.translation.height)
                         let next = router.selectedTab.neighbor(dx < 0 ? -1 : 1)
                         let commit = horizontal && next != nil

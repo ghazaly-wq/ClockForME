@@ -4,7 +4,6 @@ import SwiftUI
 /// Tabs navigate (never act), have Arabic labels, and give selection haptics.
 struct CurvedTabBar: View {
     @Binding var selection: AppTab
-    @Namespace private var glassNS
 
     // Right-to-left layout: the first item of an HStack sits on the right.
     private let rightTabs: [AppTab] = [.tasks, .alarms]
@@ -16,16 +15,20 @@ struct CurvedTabBar: View {
                 .fill(Theme.barMuted)
                 .ignoresSafeArea(edges: .bottom)
 
-            // One glass track per side, and a single glass "lens" that slides (morphs) to the selected tab.
-            GlassEffectContainer(spacing: 12) {
-                HStack(spacing: 0) {
-                    trackGroup(rightTabs)
-                    Color.clear.frame(width: Metrics.homeRingDiameter)
-                    trackGroup(leftTabs)
+            // Tabs sit on the arc: lower and tilted toward the sides, following the bar's curve.
+            GeometryReader { geo in
+                let w = geo.size.width
+                let slot = (w - Metrics.homeRingDiameter) / 4
+                GlassEffectContainer(spacing: 8) {
+                    ZStack(alignment: .topLeading) {
+                        arcTab(.tasks, x: w - slot * 0.5, width: w)
+                        arcTab(.alarms, x: w - slot * 1.5, width: w)
+                        arcTab(.achievements, x: slot * 1.5, width: w)
+                        arcTab(.pages, x: slot * 0.5, width: w)
+                    }
                 }
             }
-            .frame(height: Metrics.tabRowHeight)
-            .padding(.top, Metrics.barRise)
+            .frame(height: Metrics.barHeight)
 
             homeButton
                 .offset(y: -Metrics.homeRingDiameter / 2)
@@ -36,16 +39,26 @@ struct CurvedTabBar: View {
         .sensoryFeedback(.selection, trigger: selection)
     }
 
-    private func trackGroup(_ tabs: [AppTab]) -> some View {
-        HStack(spacing: 0) { ForEach(tabs) { tabButton($0) } }
-            .padding(3)
-            .glassEffect(.regular, in: Capsule())
+    /// Places a tab at `x`, on the same quadratic arc as `BottomBarArcShape`:
+    /// y = rise * (1 - 2u)^2 with u = x / width, tilted by the arc's slope there.
+    private func arcTab(_ tab: AppTab, x: CGFloat, width: CGFloat) -> some View {
+        let u = x / width
+        let rise = Metrics.barRise
+        let curveY = rise * pow(1 - 2 * u, 2)
+        let slope = -4 * rise * (1 - 2 * u) / width
+        let angle = Angle(radians: Double(atan(slope)))
+        let h: CGFloat = 50
+        let slot = (width - Metrics.homeRingDiameter) / 4
+        return tabButton(tab)
+            .frame(width: slot, height: h)
+            .rotationEffect(angle)
+            .position(x: x, y: curveY + 10 + h / 2)
     }
 
     private func tabButton(_ tab: AppTab) -> some View {
         let isSelected = selection == tab
         return Button {
-            withAnimation(.smooth(duration: 0.4)) { selection = tab }
+            selection = tab
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: isSelected ? tab.selectedSymbol : tab.symbol)
@@ -54,14 +67,12 @@ struct CurvedTabBar: View {
                     .font(.caption2.weight(.semibold))
             }
             .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.85))
-            .frame(maxWidth: .infinity, minHeight: 44)
-            .background {
-                if isSelected {
-                    Color.clear
-                        .glassEffect(.regular.tint(Theme.primary.opacity(0.85)).interactive(), in: Capsule())
-                        .glassEffectID("lens", in: glassNS)
-                }
-            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .glassEffect(
+                isSelected ? .regular.tint(Theme.primary.opacity(0.9)).interactive() : .regular.interactive(),
+                in: Capsule()
+            )
+            .padding(.horizontal, 3)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
