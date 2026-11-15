@@ -61,8 +61,72 @@ jobs:
           name: Habits-ipa
           path: Habits.ipa
 
-      - name: Attach IPA to release
+      - name: Attach IPA to release (tags)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: Habits.ipa
+
+      # Every green build on main becomes a Release the phone can download directly
+      # (no zip, no PC), plus an AltStore source that always points at the newest one.
+      - name: Publish build release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          files: Habits.ipa
+          make_latest: true
+
+      - name: Write AltStore source
+        if: github.ref == 'refs/heads/main'
+        run: |
+          REPO="${{ github.repository }}"
+          BUILD="${{ github.run_number }}"
+          SIZE=$(stat -f%z Habits.ipa)
+          DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          URL="https://github.com/$REPO/releases/download/build-$BUILD/Habits.ipa"
+          cat > source.json <<EOF
+          {
+            "name": "عاداتي",
+            "identifier": "com.ghazaly.habits.source",
+            "subtitle": "تطبيق عاداتي الشخصي",
+            "apps": [
+              {
+                "name": "عاداتي",
+                "bundleIdentifier": "com.ghazaly.habits",
+                "developerName": "Ghazaly",
+                "subtitle": "ابنِ عاداتك",
+                "localizedDescription": "تطبيق عاداتي: مهمات، تنبيهات، إنجازات وصفحات خاصة.",
+                "iconURL": "https://github.com/ghazaly-wq.png",
+                "tintColor": "12A96A",
+                "version": "0.1.0",
+                "versionDate": "$DATE",
+                "downloadURL": "$URL",
+                "size": $SIZE,
+                "versions": [
+                  {
+                    "version": "0.1.0",
+                    "buildVersion": "$BUILD",
+                    "date": "$DATE",
+                    "downloadURL": "$URL",
+                    "size": $SIZE,
+                    "minOSVersion": "26.1"
+                  }
+                ]
+              }
+            ],
+            "news": []
+          }
+          EOF
+          python3 -c "import json;json.load(open('source.json'))"
+
+      - name: Publish AltStore source
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: altstore-source
+          name: AltStore source
+          body: Add this link in AltStore → Sources → "+" (releases/download/altstore-source/source.json).
+          files: source.json
+          make_latest: false
