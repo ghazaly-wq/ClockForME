@@ -5,6 +5,9 @@ import SwiftUI
 /// Returns Form sections, so use it inside a `Form`.
 struct ScheduleFields: View {
     @Binding var schedule: PageSchedule
+    /// Only the time and the way it reaches you (used where the repetition is set elsewhere, like the task editor).
+    var timeOnly = false
+    var timeTitle: LocalizedStringKey = "وقت الجلسة"
 
     @Environment(\.digitStyle) private var digits
     @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
@@ -99,7 +102,7 @@ struct ScheduleFields: View {
     // MARK: Body
 
     var body: some View {
-        Section("وقت الجلسة") {
+        Section(timeTitle) {
             Picker("نوع التوقيت", selection: timeKind) {
                 Text("توقيت عادي").tag(TimeKind.clock)
                 Text("الصلاة").tag(TimeKind.prayer)
@@ -116,6 +119,15 @@ struct ScheduleFields: View {
             }
         }
 
+        DeliveryPicker(delivery: $schedule.delivery)
+
+        if !timeOnly {
+            repetitionSections
+        }
+    }
+
+    @ViewBuilder
+    private var repetitionSections: some View {
         Section("التكرار") {
             Picker("التكرار", selection: repeatKind) {
                 Text("مرة واحدة").tag(RepeatKind.once)

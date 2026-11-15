@@ -42,6 +42,7 @@ struct AlarmEditorView: View {
     @State private var weekdays: Set<Weekday> = Set(Weekday.allCases)
     @State private var monthDays: Set<Int> = [1]
     @State private var isMainTask = false
+    @State private var delivery: AlarmDelivery = .alarm
     @State private var showUnlinkDialog = false
 
     init(target: AlarmEditorTarget) {
@@ -55,6 +56,7 @@ struct AlarmEditorView: View {
         _title = State(initialValue: alarm.title)
         _note = State(initialValue: alarm.note)
         _isMainTask = State(initialValue: alarm.isMainTask)
+        _delivery = State(initialValue: alarm.delivery)
         switch alarm.time {
         case let .clock(hour, minute):
             _timeKind = State(initialValue: .clock)
@@ -163,6 +165,8 @@ struct AlarmEditorView: View {
                     }
                 }
 
+                DeliveryPicker(delivery: $delivery)
+
                 Section {
                     TextField("اسم التنبيه", text: $title)
                     TextField("ملاحظة (اختياري)", text: $note, axis: .vertical)
@@ -173,7 +177,7 @@ struct AlarmEditorView: View {
                     Toggle("هل هذا التنبيه لمهمة رئيسية؟", isOn: $isMainTask)
                 } footer: {
                     Text(isMainTask
-                         ? "تنضاف مهمة رئيسية بنفس الاسم والتكرار، وفي الإشعار زر \"تم\" يكمّلها لك."
+                         ? "تنضاف مهمة رئيسية بنفس الاسم والتكرار، وتكمّلها من التطبيق."
                          : "التنبيه العادي يرن فقط، وما يرتبط بالمهمات.")
                 }
             }
@@ -307,7 +311,8 @@ struct AlarmEditorView: View {
             time: timeSpec,
             isMainTask: isMainTask,
             extraPrayers: timeKind == .prayer ? Array(orderedPrayers.dropFirst()) : [],
-            endDay: (repeatKind != .once && hasEnd) ? DayKey(date: endDate, calendar: calendar) : nil
+            endDay: (repeatKind != .once && hasEnd) ? DayKey(date: endDate, calendar: calendar) : nil,
+            delivery: delivery
         )
 
         let record: AlarmRecord

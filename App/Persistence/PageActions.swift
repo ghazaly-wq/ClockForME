@@ -89,10 +89,7 @@ enum PageActions {
         record.definition = page
         syncLinks(page, alarms: alarms, tasks: tasks, completions: completions, context: context, today: today)
         try? context.save()
-        Task { @MainActor in
-            if page.schedule != nil { await AlarmScheduler.requestAuthorizationIfNeeded() }
-            await AlarmActions.replan(container: AppEnvironment.shared.container)
-        }
+        Task { @MainActor in await AlarmActions.requestAndReplan() }
     }
 
     static func syncLinks(

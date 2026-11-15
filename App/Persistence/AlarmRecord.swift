@@ -19,6 +19,8 @@ final class AlarmRecord {
     var extraPrayersData: Data? = nil
     /// Last day a routine still rings (`yyyy-MM-dd`), nil = never ends.
     var endDayISO: String? = nil
+    /// `AlarmDelivery` raw value; nil (older data) means a ringing alarm.
+    var deliveryRaw: String? = nil
 
     init(rule: AlarmRule, createdAt: Date = Date()) {
         self.id = rule.id
@@ -32,6 +34,7 @@ final class AlarmRecord {
         self.linkedPageID = rule.linkedPageID
         self.extraPrayersData = rule.extraPrayers.isEmpty ? nil : (try? JSONEncoder().encode(rule.extraPrayers))
         self.endDayISO = rule.endDay?.isoString
+        self.deliveryRaw = rule.delivery == .alarm ? nil : rule.delivery.rawValue
     }
 }
 
@@ -53,10 +56,16 @@ extension AlarmRecord {
 
     var endDay: DayKey? { endDayISO.flatMap { DayKey(isoString: $0) } }
 
+    var delivery: AlarmDelivery {
+        get { deliveryRaw.flatMap { AlarmDelivery(rawValue: $0) } ?? .alarm }
+        set { deliveryRaw = newValue == .alarm ? nil : newValue.rawValue }
+    }
+
     var rule: AlarmRule {
         AlarmRule(
             id: id, title: title, note: note, isEnabled: isEnabled, repetition: repetition, time: time,
-            isMainTask: isMainTask, linkedPageID: linkedPageID, extraPrayers: extraPrayers, endDay: endDay
+            isMainTask: isMainTask, linkedPageID: linkedPageID, extraPrayers: extraPrayers, endDay: endDay,
+            delivery: delivery
         )
     }
 
@@ -70,10 +79,11 @@ extension AlarmRecord {
         linkedPageID = rule.linkedPageID
         extraPrayersData = rule.extraPrayers.isEmpty ? nil : (try? JSONEncoder().encode(rule.extraPrayers))
         endDayISO = rule.endDay?.isoString
+        delivery = rule.delivery
     }
 
     /// Changes whenever anything that affects notifications changes.
     var fingerprint: String {
-        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(linkedPageID?.uuidString ?? "")|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())|\(extraPrayersData?.base64EncodedString() ?? "")|\(endDayISO ?? "")"
+        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(linkedPageID?.uuidString ?? "")|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())|\(extraPrayersData?.base64EncodedString() ?? "")|\(endDayISO ?? "")|\(deliveryRaw ?? "")"
     }
 }

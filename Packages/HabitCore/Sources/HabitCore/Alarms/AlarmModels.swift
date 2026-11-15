@@ -13,6 +13,14 @@ public enum TimeSpec: Codable, Equatable, Sendable {
     }
 }
 
+/// How an alarm reaches the owner.
+public enum AlarmDelivery: String, Codable, CaseIterable, Equatable, Sendable {
+    /// A real alarm: covers the screen and rings (AlarmKit).
+    case alarm
+    /// Only a notification: a banner and a sound, no ringing screen.
+    case notification
+}
+
 /// An alarm definition (the app stores it in SwiftData; this is the pure form).
 public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
@@ -28,6 +36,8 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     public var extraPrayers: [Prayer]
     /// Last day a weekly/monthly routine still rings (inclusive). `nil` = never ends.
     public var endDay: DayKey?
+    /// A ringing alarm (default) or just a notification.
+    public var delivery: AlarmDelivery
 
     public init(
         id: UUID = UUID(),
@@ -39,7 +49,8 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         isMainTask: Bool = false,
         linkedPageID: UUID? = nil,
         extraPrayers: [Prayer] = [],
-        endDay: DayKey? = nil
+        endDay: DayKey? = nil,
+        delivery: AlarmDelivery = .alarm
     ) {
         self.id = id
         self.title = title
@@ -51,6 +62,7 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         self.linkedPageID = linkedPageID
         self.extraPrayers = extraPrayers
         self.endDay = endDay
+        self.delivery = delivery
     }
 
     /// Every prayer this alarm follows, the main one first. Empty for clock alarms.
@@ -60,7 +72,7 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, note, isEnabled, repetition, time, isMainTask, linkedPageID, extraPrayers, endDay
+        case id, title, note, isEnabled, repetition, time, isMainTask, linkedPageID, extraPrayers, endDay, delivery
     }
 
     public init(from decoder: Decoder) throws {
@@ -75,5 +87,6 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         linkedPageID = try c.decodeIfPresent(UUID.self, forKey: .linkedPageID)
         extraPrayers = try c.decodeIfPresent([Prayer].self, forKey: .extraPrayers) ?? []
         endDay = try c.decodeIfPresent(DayKey.self, forKey: .endDay)
+        delivery = try c.decodeIfPresent(AlarmDelivery.self, forKey: .delivery) ?? .alarm
     }
 }

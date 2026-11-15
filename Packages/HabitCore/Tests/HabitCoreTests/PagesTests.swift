@@ -329,5 +329,16 @@ final class PagesTests: XCTestCase {
         let round = try JSONDecoder().decode(PageSchedule.self, from: JSONEncoder().encode(PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0))))
         XCTAssertEqual(round.extraPrayers, [])
         XCTAssertNil(round.endDay)
+        XCTAssertEqual(round.delivery, .alarm)
+    }
+
+    func testPageScheduleDeliveryReachesTheAlarm() throws {
+        var page = PageDefinition(name: "p")
+        page.schedule = PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0), delivery: .notification)
+        XCTAssertEqual(PageLogic.alarmRule(for: page)?.delivery, .notification)
+        let round = try JSONDecoder().decode(PageSchedule.self, from: JSONEncoder().encode(page.schedule!))
+        XCTAssertEqual(round.delivery, .notification)
+        page.schedule = PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0))
+        XCTAssertEqual(PageLogic.alarmRule(for: page)?.delivery, .alarm)
     }
 }

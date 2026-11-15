@@ -11,6 +11,7 @@ struct TaskEditorView: View {
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
     @Query private var completions: [CompletionRecord]
     @Query private var allTasks: [TaskRecord]
+    @Query private var alarms: [AlarmRecord]
 
     enum ScheduleType: Hashable {
         case once, weekly, monthly, anytime
@@ -23,6 +24,12 @@ struct TaskEditorView: View {
     @State private var weekdays: Set<Weekday> = Set(Weekday.allCases)
     @State private var monthDays: Set<Int> = [1]
     @State private var notes = ""
+    // The alarm made from inside the task (time, prayers, ringing or notification only).
+    @State private var alarmEnabled = false
+    @State private var alarmSchedule = PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0))
+    /// The alarm already linked to the task being edited.
+    @State private var linkedAlarm: AlarmRecord?
+    @State private var alarmLoaded = false
 
     init(target: EditorTarget) {
         self.target = target
@@ -83,9 +90,12 @@ struct TaskEditorView: View {
                         Text("فرعية").tag(TaskKind.secondary)
                     }
                     .pickerStyle(.segmented)
-                    Text(kind == .main
-                         ? "الرئيسية تحسب في الستريك وتظهر في شريط يومك."
-                         : "الفرعية تعطي نفس الخبرة، لكن ما تأثر على الستريك.")
+                    .disabled(linkedAlarm != nil)
+                    Text(linkedAlarm != nil
+                         ? "المهمة مرتبطة بتنبيه، فنوعها ثابت (رئيسية)."
+                         : (kind == .main
+                            ? "الرئيسية تحسب في الستريك وتظهر في شريط يومك."
+                            : "الفرعية تعطي نفس الخبرة، لكن ما تأثر على الستريك."))
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -103,11 +113,23 @@ struct TaskEditorView: View {
                     scheduleDetails
                 }
 
+                if alarmAllowed {
+                    Section {
+                        Toggle("إنشاء تنبيه لهذه المهمة", isOn: $alarmEnabled.animation())
+                    } footer: {
+                        Text(alarmFooter)
+                    }
+                    if alarmEnabled {
+                        ScheduleFields(schedule: $alarmSchedule, timeOnly: true, timeTitle: "وقت التنبيه")
+                    }
+                }
+
                 Section("ملاحظات") {
                     TextField("ملاحظات (اختياري)", text: $notes, axis: .vertical)
                         .lineLimit(1...4)
                 }
             }
+            .onAppear(perform: loadLinkedAlarm)
             .navigationTitle(isEditing ? "تعديل المهمة" : "مهمة جديدة")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -123,6 +145,82 @@ struct TaskEditorView: View {
                 if newKind == .main && scheduleType == .anytime { scheduleType = .once }
             }
         }
+    }
+
+    // MARK: - Alarm of the task
+
+    /// A task with no date has nothing to ring on; a secondary task gets its alarm only when it is created
+    /// (that alarm is a normal one, edited from the Alarms page).
+    private var alarmAllowed: Bool {
+        scheduleType != .anytime && (kind == .main || !isEditing)
+    }
+
+    private var alarmFooter: String {
+        if linkedAlarm != nil && !alarmEnabled {
+            return "تطفيه يحذف التنبيه المرتبط، والمهمة تبقى."
+        }
+        return kind == .main
+            ? "ينضاف تنبيه بنفس الاسم والتكرار ومربوط بالمهمة، ووقته يظهر تحت اسمها."
+            : "ينضاف تنبيه عادي بنفس الاسم والتكرار، وما يرتبط بالمهمة. تعدّله من صفحة التنبيهات."
+    }
+
+    private func loadLinkedAlarm() {
+        guard !alarmLoaded else { return }
+        alarmLoaded = true
+        guard case .edit(let task) = target, let id = task.alarmID,
+              let alarm = alarms.first(where: { $0.id == id }) else { return }
+        linkedAlarm = alarm
+        alarmEnabled = true
+        alarmSchedule = PageSchedule(
+            repetition: alarm.repetition, time: alarm.time, extraPrayers: alarm.extraPrayers,
+            endDay: alarm.endDay, delivery: alarm.delivery
+        )
+    }
+
+    /// Creates, updates or removes the task's alarm after the task itself was saved.
+    /// `saved` is the task that is active now (a new one when the old task had history and was split).
+    private func applyAlarm(to saved: TaskRecord, previous: TaskRecord?, repetition: Repetition?, title: String) {
+        let existing = previous?.alarmID.flatMap { id in alarms.first { $0.id == id } }
+
+        guard alarmAllowed, alarmEnabled, let repetition else {
+            // Switched off on purpose: the alarm goes away, the task stays.
+            if alarmAllowed, let existing {
+                AlarmScheduler.cancelAll(forRule: existing.id)
+                for task in allTasks where task.alarmID == existing.id {
+                    task.alarmID = nil
+                    task.time = nil
+                    task.extraPrayers = []
+                    task.routineEnd = nil
+                }
+                saved.alarmID = nil
+                context.delete(existing)
+                Task { @MainActor in await AlarmActions.requestAndReplan() }
+            }
+            return
+        }
+
+        var rule = AlarmRule(
+            title: title, repetition: repetition, time: alarmSchedule.time,
+            isMainTask: kind == .main, extraPrayers: alarmSchedule.extraPrayers, delivery: alarmSchedule.delivery
+        )
+        if let existing {
+            rule.id = existing.id
+            rule.isEnabled = existing.isEnabled
+            rule.note = existing.note
+            rule.linkedPageID = existing.linkedPageID
+            if case .once = repetition { rule.endDay = nil } else { rule.endDay = existing.endDay }
+            existing.apply(rule)
+            if let previous, previous !== saved { previous.alarmID = nil }
+        } else {
+            context.insert(AlarmRecord(rule: rule))
+        }
+        if kind == .main {
+            saved.alarmID = rule.id
+            saved.time = rule.time
+            saved.extraPrayers = rule.extraPrayers
+            saved.routineEnd = rule.endDay
+        }
+        Task { @MainActor in await AlarmActions.requestAndReplan() }
     }
 
     // MARK: - Schedule details
@@ -194,16 +292,23 @@ struct TaskEditorView: View {
         if case .once(let day)? = repetition { start = day }
         let nextOrder = (allTasks.map(\.sortOrder).max() ?? -1) + 1
 
+        let saved: TaskRecord
+        var previous: TaskRecord?
         switch target {
         case .new:
-            context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: nextOrder))
+            let task = TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: nextOrder)
+            context.insert(task)
+            saved = task
         case .edit(let task):
+            previous = task
             let hasHistory = completions.contains { $0.taskID == task.id }
             let scheduleChanged = task.kind != kind || task.repetition != repetition
             if hasHistory && scheduleChanged {
                 // Keep past days exactly as they were: stop the old task today and start a new one.
                 task.endDay = today
-                context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: task.sortOrder))
+                let newTask = TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: task.sortOrder)
+                context.insert(newTask)
+                saved = newTask
             } else {
                 task.title = trimmed
                 task.kind = kind
@@ -214,8 +319,10 @@ struct TaskEditorView: View {
                 } else {
                     task.startDay = min(task.startDay, today)
                 }
+                saved = task
             }
         }
+        applyAlarm(to: saved, previous: previous, repetition: repetition, title: trimmed)
         try? context.save()
         dismiss()
     }

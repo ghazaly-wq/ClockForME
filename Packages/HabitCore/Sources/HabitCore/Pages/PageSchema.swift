@@ -284,12 +284,15 @@ public struct PageSchedule: Codable, Equatable, Sendable {
     public var extraPrayers: [Prayer]
     /// Last day the routine still happens (inclusive); nil = never ends.
     public var endDay: DayKey?
+    /// A ringing alarm (default) or just a notification for the page's linked alarm.
+    public var delivery: AlarmDelivery
 
-    public init(repetition: Repetition, time: TimeSpec, extraPrayers: [Prayer] = [], endDay: DayKey? = nil) {
+    public init(repetition: Repetition, time: TimeSpec, extraPrayers: [Prayer] = [], endDay: DayKey? = nil, delivery: AlarmDelivery = .alarm) {
         self.repetition = repetition; self.time = time; self.extraPrayers = extraPrayers; self.endDay = endDay
+        self.delivery = delivery
     }
 
-    private enum CodingKeys: String, CodingKey { case repetition, time, extraPrayers, endDay }
+    private enum CodingKeys: String, CodingKey { case repetition, time, extraPrayers, endDay, delivery }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -297,6 +300,7 @@ public struct PageSchedule: Codable, Equatable, Sendable {
         time = try c.decode(TimeSpec.self, forKey: .time)
         extraPrayers = try c.decodeIfPresent([Prayer].self, forKey: .extraPrayers) ?? []
         endDay = try c.decodeIfPresent(DayKey.self, forKey: .endDay)
+        delivery = try c.decodeIfPresent(AlarmDelivery.self, forKey: .delivery) ?? .alarm
     }
 }
 

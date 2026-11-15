@@ -3,6 +3,7 @@ import SwiftData
 import SwiftUI
 import UIKit
 import AlarmKit
+import UserNotifications
 
 struct AlarmsView: View {
     @Environment(\.modelContext) private var context
@@ -20,6 +21,7 @@ struct AlarmsView: View {
     @State private var now = Date()
     @State private var editor: AlarmEditorTarget?
     @State private var authStatus: AlarmManager.AuthorizationState?
+    @State private var notificationStatus: UNAuthorizationStatus?
     @State private var undoToken: DeletedAlarmSnapshot?
     @State private var undoDismiss: Task<Void, Never>?
 
@@ -41,9 +43,19 @@ struct AlarmsView: View {
 
         CurvedPage(title: "التنبيهات", scrollable: false, onAdd: { editor = .new }) {
             List {
-                if authStatus == .denied {
+                if authStatus == .denied && alarms.contains(where: { $0.isEnabled && $0.delivery == .alarm }) {
                     banner(
                         text: "إذن المنبهات متوقف، فما راح ترن تنبيهاتك.",
+                        button: "فتح إعدادات الجهاز"
+                    ) {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                }
+                if notificationStatus == .denied && alarms.contains(where: { $0.isEnabled && $0.delivery == .notification }) {
+                    banner(
+                        text: "إذن الإشعارات متوقف، فما راح توصلك التنبيهات اللي نوعها إشعار فقط.",
                         button: "فتح إعدادات الجهاز"
                     ) {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -90,6 +102,7 @@ struct AlarmsView: View {
         }
         .task(id: scenePhase) {
             authStatus = AlarmScheduler.authorizationState
+            notificationStatus = await AlarmNotifier.authorizationStatus()
             AlarmActions.expireFinished(context: context)
         }
         .onReceive(ticker) { date in
@@ -143,6 +156,14 @@ struct AlarmsView: View {
                         }
                         if alarm.isMainTask {
                             Label("مهمة رئيسية", systemImage: "star.fill")
+                                .font(.caption2.bold())
+                                .foregroundStyle(Theme.primaryStrong)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .overlay(Capsule().stroke(Theme.primaryStrong, lineWidth: 1))
+                        }
+                        if alarm.delivery == .notification {
+                            Label("إشعار فقط", systemImage: "bell")
                                 .font(.caption2.bold())
                                 .foregroundStyle(Theme.primaryStrong)
                                 .padding(.horizontal, 8)

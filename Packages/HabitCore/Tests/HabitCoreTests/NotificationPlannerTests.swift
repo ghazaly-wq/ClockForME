@@ -133,6 +133,17 @@ final class NotificationPlannerTests: XCTestCase {
         let decoded = try JSONDecoder().decode(AlarmRule.self, from: JSONSerialization.data(withJSONObject: obj))
         XCTAssertEqual(decoded.extraPrayers, [])
         XCTAssertNil(decoded.endDay)
+        XCTAssertEqual(decoded.delivery, .alarm)   // alarms saved before the option existed keep ringing
+    }
+
+    func testDeliveryRoundTripsAndDoesNotChangeThePlan() throws {
+        var alarm = AlarmRule(title: "x", repetition: .daily, time: .clock(hour: 7, minute: 0))
+        let ringing = NotificationPlanner.plan(alarms: [alarm], from: date(2026, 3, 10, 0, 0), days: 3, provider: nil, calendar: cal)
+        alarm.delivery = .notification
+        let round = try JSONDecoder().decode(AlarmRule.self, from: JSONEncoder().encode(alarm))
+        XCTAssertEqual(round.delivery, .notification)
+        let quiet = NotificationPlanner.plan(alarms: [round], from: date(2026, 3, 10, 0, 0), days: 3, provider: nil, calendar: cal)
+        XCTAssertEqual(quiet.map(\.fireDate), ringing.map(\.fireDate))
     }
 }
 

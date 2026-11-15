@@ -235,8 +235,12 @@ enum AlarmActions {
     /// After any alarm is saved or switched on: ask for notification permission the first
     /// time (never earlier), then refresh the pending notifications.
     static func requestAndReplan() async {
-        await AlarmScheduler.requestAuthorizationIfNeeded()
-        await replan(container: AppEnvironment.shared.container)
+        let container = AppEnvironment.shared.container
+        let context = ModelContext(container)
+        let rules = ((try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []).map(\.rule).filter(\.isEnabled)
+        if rules.contains(where: { $0.delivery == .alarm }) { await AlarmScheduler.requestAuthorizationIfNeeded() }
+        if rules.contains(where: { $0.delivery == .notification }) { await AlarmNotifier.requestAuthorizationIfNeeded() }
+        await replan(container: container)
     }
 
     /// Reads alarms and the prayer location from storage and refreshes the pending notifications.
@@ -246,6 +250,8 @@ enum AlarmActions {
         backfillTaskTimes(context: context)
         let alarms = ((try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []).map(\.rule)
         let location = PrayerLocation.load()
-        await AlarmScheduler.replan(alarms: alarms, location: location)
+        // Ringing alarms go through AlarmKit; "notification only" ones are plain local notifications.
+        await AlarmScheduler.replan(alarms: alarms.filter { $0.delivery == .alarm }, location: location)
+        await AlarmNotifier.replan(alarms: alarms.filter { $0.delivery == .notification }, location: location)
     }
 }

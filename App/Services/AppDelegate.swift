@@ -3,6 +3,7 @@ import HabitCore
 import SwiftData
 import SwiftUI
 import UIKit
+import UserNotifications
 
 /// Things the app delegate, the notification buttons and the SwiftUI scene all share.
 @MainActor
@@ -25,13 +26,14 @@ final class AppEnvironment {
     }
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     nonisolated static let refreshTaskID = "com.ghazaly.habits.refresh"
 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
+        UNUserNotificationCenter.current().delegate = self
         BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.refreshTaskID, using: nil) { task in
             guard let task = task as? BGAppRefreshTask else { return }
             Self.scheduleBackgroundRefresh()
@@ -42,6 +44,34 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
             task.expirationHandler = { work.cancel() }
         }
         return true
+    }
+
+    /// Show banners (and play the sound) even while the app is open, so a notification-only alarm is never silent.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        [.banner, .list, .sound]
+    }
+
+    /// Tapping a notification-only alarm opens the Tasks page (main-task alarms), its custom page, or the Alarms page.
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let info = response.notification.request.content.userInfo
+        guard info["kind"] as? String == "alarmnote" else { return }
+        let showTasks = info["showTasks"] as? Bool ?? false
+        let page = (info["pageID"] as? String).flatMap { UUID(uuidString: $0) }
+        await MainActor.run {
+            let router = AppEnvironment.shared.router
+            if let page {
+                router.openPageID = page
+                router.selectedTab = .pages
+            } else {
+                router.selectedTab = showTasks ? .tasks : .alarms
+            }
+        }
     }
 
     /// Asks the system to wake the app now and then so the notification window keeps rolling,
