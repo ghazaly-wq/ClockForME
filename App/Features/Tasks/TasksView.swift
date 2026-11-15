@@ -46,6 +46,9 @@ struct TasksView: View {
     private var tasks: [TaskRecord]
     @Query private var completions: [CompletionRecord]
     @Query private var alarms: [AlarmRecord]
+    @Query private var unlocks: [AchievementUnlockRecord]
+    @Query private var purchases: [PurchaseRecord]
+    @Query private var rewards: [RewardRecord]
 
     @State private var segment: TaskKind = .main
     @State private var filter: TaskFilter = .all
@@ -61,7 +64,8 @@ struct TasksView: View {
     var body: some View {
         let calendar = Calendar.app
         let snapshot = ProgressSnapshot.make(
-            tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour, calendar: calendar
+            tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour, calendar: calendar,
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
         )
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
         let doneEver = Set(completions.map(\.taskID))

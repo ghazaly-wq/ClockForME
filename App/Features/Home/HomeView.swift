@@ -15,6 +15,9 @@ struct HomeView: View {
     private var tasks: [TaskRecord]
     @Query private var completions: [CompletionRecord]
     @Query(sort: \AlarmRecord.createdAt) private var alarms: [AlarmRecord]
+    @Query private var unlocks: [AchievementUnlockRecord]
+    @Query private var purchases: [PurchaseRecord]
+    @Query private var rewards: [RewardRecord]
 
     @State private var now = Date()
     @State private var taskSheet: EditorTarget?
@@ -25,7 +28,8 @@ struct HomeView: View {
     var body: some View {
         let calendar = Calendar.app
         let snapshot = ProgressSnapshot.make(
-            tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour, calendar: calendar
+            tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour, calendar: calendar,
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
         )
         let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
@@ -52,6 +56,8 @@ struct HomeView: View {
                 upcomingCard(upcomingAlarms)
                 mainTasksCard(mainToday, doneToday: doneToday, snapshot: snapshot, provider: provider, calendar: calendar)
                 LevelCard(summary: snapshot.summary)
+                HomeGoalsCard(snapshot: snapshot, rewards: rewards)
+                RecentAchievementsCard(unlocks: unlocks)
                 quickActions
             }
         }

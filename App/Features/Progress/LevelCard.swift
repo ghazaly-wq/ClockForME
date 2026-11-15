@@ -14,9 +14,39 @@ extension LevelTitle {
     }
 }
 
+/// The level-card border chosen in the shop. Distinguished by shape, not only by color.
+struct FrameBorder: View {
+    let frameID: String
+    var cornerRadius: CGFloat = 20
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        switch frameID {
+        case "frame.silver":
+            shape.strokeBorder(
+                LinearGradient(colors: [Color.gray, Color.white, Color.gray], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 3
+            )
+        case "frame.gold":
+            shape.strokeBorder(
+                LinearGradient(colors: [Theme.gold, Color.yellow.opacity(0.9), Theme.gold], startPoint: .topLeading, endPoint: .bottomTrailing),
+                lineWidth: 4
+            )
+        case "frame.double":
+            ZStack {
+                shape.strokeBorder(Theme.gold, lineWidth: 2.5)
+                shape.inset(by: 6).strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1.5)
+            }
+        default:
+            EmptyView()
+        }
+    }
+}
+
 /// Level number, Arabic title, XP bar and points balance.
 struct LevelCard: View {
     let summary: ProgressSummary
+    @AppStorage(SettingsKey.equippedFrame) private var frameID = ShopCatalog.defaultFrame
     @Environment(\.digitStyle) private var digits
 
     var body: some View {
@@ -49,6 +79,7 @@ struct LevelCard: View {
         }
         .padding(16)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay { FrameBorder(frameID: frameID).allowsHitTesting(false) }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(Text(digits.format(String(localized: "المستوى \(summary.level)، \(summary.title.arabicName)"))))
     }

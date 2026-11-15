@@ -14,7 +14,10 @@ final class AppEnvironment {
 
     private init() {
         do {
-            container = try ModelContainer(for: TaskRecord.self, CompletionRecord.self, AlarmRecord.self)
+            container = try ModelContainer(
+                for: TaskRecord.self, CompletionRecord.self, AlarmRecord.self,
+                AchievementUnlockRecord.self, PurchaseRecord.self, RewardRecord.self
+            )
         } catch {
             fatalError("Could not open the database: \(error)")
         }

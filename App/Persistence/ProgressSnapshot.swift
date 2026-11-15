@@ -1,5 +1,6 @@
 import Foundation
 import HabitCore
+import SwiftData
 
 extension Calendar {
     /// Gregorian, week starts on Sunday, device time zone.
@@ -11,20 +12,78 @@ extension Calendar {
     }
 }
 
+/// The saved things that change XP and points on top of the history:
+/// unlocked achievements (bonus) and what was spent (shop purchases, claimed point rewards).
+struct ProgressExtras {
+    var unlockedIDs: Set<String> = []
+    var spentPoints = 0
+
+    static let zero = ProgressExtras()
+
+    init(unlockedIDs: Set<String> = [], spentPoints: Int = 0) {
+        self.unlockedIDs = unlockedIDs
+        self.spentPoints = spentPoints
+    }
+
+    init(unlocks: [AchievementUnlockRecord], purchases: [PurchaseRecord], rewards: [RewardRecord]) {
+        unlockedIDs = Set(unlocks.map(\.achievementID))
+        spentPoints = purchases.reduce(0) { $0 + $1.price } + rewards.reduce(0) { $0 + $1.claimedCost }
+    }
+
+    @MainActor
+    static func load(context: ModelContext) -> ProgressExtras {
+        let unlocks = (try? context.fetch(FetchDescriptor<AchievementUnlockRecord>())) ?? []
+        let purchases = (try? context.fetch(FetchDescriptor<PurchaseRecord>())) ?? []
+        let rewards = (try? context.fetch(FetchDescriptor<RewardRecord>())) ?? []
+        return ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
+    }
+}
+
 /// Everything the UI shows about progress, computed from stored tasks and completions
 /// by the pure rules in HabitCore. Nothing here is saved, so it can never go stale.
 struct ProgressSnapshot {
     let today: DayKey
     let todayMain: DayProgress
     let streak: StreakResult
+    /// Level, XP and points including achievement bonuses and spending.
     let summary: ProgressSummary
+    /// Level and XP from history only (what achievement rules look at).
+    let baseSummary: ProgressSummary
+    let history: HistoryStats
+    let progressByDay: [DayKey: DayProgress]
+    let completedTasks: Int
+    let unlockedIDs: Set<String>
+
+    var achievementStats: AchievementStats {
+        AchievementStats(
+            completedTasks: completedTasks,
+            completeDays: streak.completeDays,
+            currentStreak: streak.current,
+            bestStreak: streak.best,
+            longestCompleteRun: history.longestCompleteRun,
+            comebacks: history.comebacks,
+            baseLevel: baseSummary.level
+        )
+    }
+
+    var rewardContext: RewardContext {
+        RewardContext(
+            level: summary.level,
+            bestStreak: streak.best,
+            totalTasks: completedTasks,
+            perfectDays: streak.completeDays,
+            unlockedAchievements: unlockedIDs,
+            pointsBalance: summary.points
+        )
+    }
 
     static func make(
         tasks: [TaskRecord],
         completions: [CompletionRecord],
         now: Date,
         dayStartHour: Int,
-        calendar: Calendar = .app
+        calendar: Calendar = .app,
+        extras: ProgressExtras = .zero
     ) -> ProgressSnapshot {
         let today = DayKey(date: now, calendar: calendar, dayStartHour: dayStartHour)
         let specs = tasks.map(\.spec)
@@ -48,14 +107,30 @@ struct ProgressSnapshot {
         }
 
         let streak = StreakEngine.compute(progressByDay: progressByDay, today: today, calendar: calendar)
-        let summary = ProgressCalculator.summary(
+        let history = HistoryStats.compute(progressByDay: progressByDay, today: today, calendar: calendar)
+        let base = ProgressCalculator.summary(
             completedTasks: completions.count,
             completeDays: streak.completeDays,
             bestStreak: streak.best
         )
+        let bonus = AchievementEvaluator.bonus(unlocked: extras.unlockedIDs)
+        let summary = ProgressCalculator.summary(
+            totalXP: base.totalXP + bonus.xp,
+            points: base.points + bonus.points - extras.spentPoints
+        )
         let todayMain = progressByDay[today]
             ?? DayProgress.compute(day: today, specs: specs, completedIDs: completedByDay[today] ?? [], calendar: calendar)
 
-        return ProgressSnapshot(today: today, todayMain: todayMain, streak: streak, summary: summary)
+        return ProgressSnapshot(
+            today: today,
+            todayMain: todayMain,
+            streak: streak,
+            summary: summary,
+            baseSummary: base,
+            history: history,
+            progressByDay: progressByDay,
+            completedTasks: completions.count,
+            unlockedIDs: extras.unlockedIDs
+        )
     }
 }

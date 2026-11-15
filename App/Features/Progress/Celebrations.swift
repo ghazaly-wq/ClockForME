@@ -1,3 +1,4 @@
+import HabitCore
 import SwiftUI
 import UIKit
 
@@ -13,18 +14,21 @@ struct ConfettiView: View {
         let colorIndex = Int.random(in: 0..<4)
     }
 
+    @AppStorage(SettingsKey.equippedEffect) private var effectID = ShopCatalog.defaultEffect
     @State private var fall = false
     @State private var pieces: [Piece] = (0..<44).map { _ in Piece() }
 
-    private var colors: [Color] { [Theme.primary, Theme.gold, Theme.primaryStrong, Theme.barMuted] }
+    private var colors: [Color] {
+        effectID == "effect.gold"
+            ? [Theme.gold, Color.yellow, Theme.gold.opacity(0.7), Color.orange]
+            : [Theme.primary, Theme.gold, Theme.primaryStrong, Theme.barMuted]
+    }
 
     var body: some View {
         GeometryReader { proxy in
             ZStack {
                 ForEach(pieces) { piece in
-                    RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(colors[piece.colorIndex])
-                        .frame(width: piece.width, height: piece.width * 1.6)
+                    pieceShape(piece)
                         .rotationEffect(.degrees(fall ? piece.rotation : 0))
                         .position(
                             x: piece.x * proxy.size.width,
@@ -36,6 +40,19 @@ struct ConfettiView: View {
         }
         .onAppear { fall = true }
         .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func pieceShape(_ piece: Piece) -> some View {
+        if effectID == "effect.stars" {
+            Image(systemName: "star.fill")
+                .font(.system(size: piece.width * 1.8))
+                .foregroundStyle(colors[piece.colorIndex])
+        } else {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(colors[piece.colorIndex])
+                .frame(width: piece.width, height: piece.width * 1.6)
+        }
     }
 }
 
@@ -111,6 +128,70 @@ struct LevelUpSheet: View {
         .background(Theme.surface.ignoresSafeArea())
         .presentationDetents([.medium])
         .accessibilityElement(children: .contain)
+        .onAppear {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+}
+
+/// Shown when one or more achievements are unlocked.
+struct AchievementUnlockSheet: View {
+    let info: UnlockInfo
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.digitStyle) private var digits
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        ZStack {
+            Theme.surface.ignoresSafeArea()
+            if !reduceMotion { ConfettiView() }
+            VStack(spacing: 18) {
+                Text(info.achievements.count == 1 ? "إنجاز جديد!" : "إنجازات جديدة!")
+                    .font(.title2.bold())
+                    .foregroundStyle(Theme.textPrimary)
+
+                ScrollView {
+                    VStack(spacing: 10) {
+                        ForEach(info.achievements) { def in
+                            HStack(spacing: 12) {
+                                Image(systemName: def.symbol)
+                                    .font(.title2)
+                                    .foregroundStyle(Color.black.opacity(0.85))
+                                    .frame(width: 48, height: 48)
+                                    .background(Theme.gold, in: Circle())
+                                    .accessibilityHidden(true)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(def.name)
+                                        .font(.headline)
+                                        .foregroundStyle(Theme.textPrimary)
+                                    Text(def.detail)
+                                        .font(.subheadline)
+                                        .foregroundStyle(Theme.textSecondary)
+                                    Text(digits.format(String(localized: "+\(def.xp) خبرة · +\(def.points) نقطة")))
+                                        .font(.caption.bold().monospacedDigit())
+                                        .foregroundStyle(Theme.primaryStrong)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                            .padding(12)
+                            .background(Theme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("تم")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(24)
+        }
+        .presentationDetents([.medium, .large])
         .onAppear {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         }

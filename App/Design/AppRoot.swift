@@ -10,6 +10,10 @@ enum SettingsKey {
     static let prayerLatitude = "prayerLatitude"
     static let prayerLongitude = "prayerLongitude"
     static let prayerPlaceName = "prayerPlaceName"
+    /// Shop selections. The theme key is also read by `Theme` (keep the two in step).
+    static let equippedTheme = "equippedTheme"
+    static let equippedFrame = "equippedFrame"
+    static let equippedEffect = "equippedEffect"
 }
 
 extension AppearanceMode {
@@ -29,6 +33,7 @@ extension AppearanceMode {
 struct AppRootModifier: ViewModifier {
     @AppStorage(SettingsKey.appearance) private var appearanceRaw = AppearanceMode.system.rawValue
     @AppStorage(SettingsKey.digitStyle) private var digitRaw = DigitStyle.western.rawValue
+    @AppStorage(SettingsKey.equippedTheme) private var themeRaw = ShopCatalog.defaultTheme
 
     func body(content: Content) -> some View {
         content
@@ -37,6 +42,8 @@ struct AppRootModifier: ViewModifier {
             .environment(\.digitStyle, DigitStyle(storedValue: digitRaw))
             .preferredColorScheme(AppearanceMode(storedValue: appearanceRaw).colorScheme)
             .tint(Theme.primary)
+            // Theme colors are read when views are built, so a new theme rebuilds the tree.
+            .id(themeRaw)
     }
 }
 

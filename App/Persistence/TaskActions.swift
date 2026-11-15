@@ -7,6 +7,7 @@ import SwiftUI
 struct CompletionOutcome {
     var completedDay = false
     var newLevel: ProgressSummary?
+    var newAchievements: [AchievementDef] = []
 }
 
 /// Everything needed to bring a hard-deleted task back.
@@ -49,11 +50,19 @@ enum TaskActions {
             return CompletionOutcome()
         }
 
-        let before = ProgressSnapshot.make(tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour)
+        let before = ProgressSnapshot.make(
+            tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour,
+            extras: ProgressExtras.load(context: context)
+        )
         let record = CompletionRecord(taskID: task.id, day: day, completedAt: now)
         context.insert(record)
         try? context.save()
-        let after = ProgressSnapshot.make(tasks: tasks, completions: completions + [record], now: now, dayStartHour: dayStartHour)
+        let updated = completions + [record]
+        let sync = AchievementActions.sync(tasks: tasks, completions: updated, context: context, now: now, dayStartHour: dayStartHour)
+        let after = ProgressSnapshot.make(
+            tasks: tasks, completions: updated, now: now, dayStartHour: dayStartHour,
+            extras: ProgressExtras.load(context: context)
+        )
 
         var outcome = CompletionOutcome()
         if task.kind == .main, before.todayMain.state != .complete, after.todayMain.state == .complete {
@@ -62,6 +71,7 @@ enum TaskActions {
         if after.summary.level > before.summary.level {
             outcome.newLevel = after.summary
         }
+        outcome.newAchievements = sync.unlocked
         return outcome
     }
 
