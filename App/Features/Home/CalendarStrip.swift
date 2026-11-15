@@ -9,6 +9,11 @@ struct CalendarStrip: View {
     let today: DayKey
 
     @Environment(\.digitStyle) private var digits
+    @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
+    @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
+    @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
+    @AppStorage(SettingsKey.taskShowAllTimes) private var showAllTimes = true
+    @AppStorage(SettingsKey.taskFollowsNextRing) private var followsNextRing = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selected: DayKey?
 
@@ -120,9 +125,10 @@ struct CalendarStrip: View {
     // MARK: - Detail of a chosen day
 
     private func detail(for day: DayKey, done: Set<UUID>) -> some View {
-        let scheduled = tasks.filter { $0.spec.isScheduled(on: day, calendar: calendar) }
+        let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
+        let scheduledUnsorted: [TaskRecord] = tasks.filter { $0.spec.isScheduled(on: day, calendar: calendar) }
+        let scheduled: [TaskRecord] = scheduledUnsorted.sortedByDueTime(on: day, provider: provider, calendar: calendar)
         let main = scheduled.filter { $0.kind == .main }
-        let secondary = scheduled.filter { $0.kind == .secondary }
         let isPast = day < today
         let doneMain = main.filter { done.contains($0.id) }.count
 
@@ -147,8 +153,8 @@ struct CalendarStrip: View {
                         .font(.subheadline.bold())
                         .foregroundStyle(Theme.primaryStrong)
                 }
-                ForEach(main + secondary) { task in
-                    row(task, isDone: done.contains(task.id), isPast: isPast)
+                ForEach(scheduled) { task in
+                    row(task, isDone: done.contains(task.id), isPast: isPast, day: day, provider: provider)
                 }
             }
         }
@@ -157,7 +163,11 @@ struct CalendarStrip: View {
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
-    private func row(_ task: TaskRecord, isDone: Bool, isPast: Bool) -> some View {
+    private func row(_ task: TaskRecord, isDone: Bool, isPast: Bool, day: DayKey, provider: PrayerTimeProviding?) -> some View {
+        let timeText: String? = TaskTimeText.text(
+            for: task, on: day, provider: provider, calendar: calendar, now: Date(),
+            showAll: showAllTimes, followsNextRing: followsNextRing, digits: digits
+        )
         HStack(spacing: 10) {
             Image(systemName: isDone ? "checkmark.circle.fill" : (isPast ? "xmark.circle" : "circle"))
                 .foregroundStyle(isDone ? Theme.primaryStrong : Theme.textSecondary)
@@ -170,6 +180,11 @@ struct CalendarStrip: View {
                 Text("فرعية").font(.caption).foregroundStyle(Theme.textSecondary)
             }
             Spacer(minLength: 0)
+            if let timeText {
+                Text(timeText)
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
         .frame(minHeight: 32)
         .accessibilityElement(children: .combine)
