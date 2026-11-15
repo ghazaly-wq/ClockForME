@@ -1,15 +1,22 @@
 import SwiftUI
 
-/// Green header with the arc, a bold white title and the settings gear.
+/// Green header with the arc, a bold white title and its actions (optional "+", settings gear).
 /// It grows with Dynamic Type instead of clipping.
 struct CurvedHeader: View {
     let title: LocalizedStringKey
     let subtitle: String?
+    let onAdd: (() -> Void)?
     let onSettings: () -> Void
 
-    init(title: LocalizedStringKey, subtitle: String? = nil, onSettings: @escaping () -> Void) {
+    init(
+        title: LocalizedStringKey,
+        subtitle: String? = nil,
+        onAdd: (() -> Void)? = nil,
+        onSettings: @escaping () -> Void
+    ) {
         self.title = title
         self.subtitle = subtitle
+        self.onAdd = onAdd
         self.onSettings = onSettings
     }
 
@@ -26,15 +33,12 @@ struct CurvedHeader: View {
                 }
             }
             Spacer(minLength: 0)
-            Button(action: onSettings) {
-                Image(systemName: "gearshape.fill")
-                    .font(.title3)
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
+            HStack(spacing: 0) {
+                if let onAdd {
+                    headerButton(symbol: "plus", label: "إضافة", action: onAdd)
+                }
+                headerButton(symbol: "gearshape.fill", label: "الإعدادات", action: onSettings)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("الإعدادات"))
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
@@ -46,33 +50,60 @@ struct CurvedHeader: View {
                 .ignoresSafeArea(edges: .top)
         }
     }
+
+    private func headerButton(symbol: String, label: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.title3.bold())
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(label))
+    }
 }
 
-/// Shell shared by every main page: curved header + scrolling content.
+/// Shell shared by every main page: curved header + content.
 /// The curved bottom bar is added once by `RootView`.
+/// Pass `scrollable: false` when the content is a `List` that scrolls by itself.
 struct CurvedPage<Content: View>: View {
     @Environment(AppRouter.self) private var router
     let title: LocalizedStringKey
     let subtitle: String?
+    let scrollable: Bool
+    let onAdd: (() -> Void)?
     let content: Content
 
-    init(title: LocalizedStringKey, subtitle: String? = nil, @ViewBuilder content: () -> Content) {
+    init(
+        title: LocalizedStringKey,
+        subtitle: String? = nil,
+        scrollable: Bool = true,
+        onAdd: (() -> Void)? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.subtitle = subtitle
+        self.scrollable = scrollable
+        self.onAdd = onAdd
         self.content = content()
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CurvedHeader(title: title, subtitle: subtitle) {
+            CurvedHeader(title: title, subtitle: subtitle, onAdd: onAdd) {
                 router.showSettings = true
             }
-            ScrollView {
+            if scrollable {
+                ScrollView {
+                    content
+                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
+                        // Room for the raised Home button that overlaps the page.
+                        .padding(.bottom, Metrics.homeRingDiameter / 2 + 8)
+                }
+            } else {
                 content
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    // Room for the raised Home button that overlaps the page.
-                    .padding(.bottom, Metrics.homeRingDiameter / 2 + 8)
             }
         }
     }

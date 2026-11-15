@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 @main
@@ -10,5 +11,6 @@ struct HabitsApp: App {
                 .environment(router)
                 .appRoot()
         }
+        .modelContainer(for: [TaskRecord.self, CompletionRecord.self])
     }
 }
