@@ -27,7 +27,7 @@ targets:
     info:
       path: Config/App-Info.plist
       properties:
-        CFBundleDisplayName: عاداتي
+        CFBundleDisplayName: Habits
         CFBundleDevelopmentRegion: ar
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
@@ -60,7 +60,7 @@ targets:
     info:
       path: Config/Widgets-Info.plist
       properties:
-        CFBundleDisplayName: عاداتي
+        CFBundleDisplayName: Habits
         CFBundleDevelopmentRegion: ar
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)

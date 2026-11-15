@@ -1,0 +1,16 @@
+{
+  "sourceLanguage": "ar",
+  "strings": {
+    "CFBundleDisplayName": {
+      "localizations": {
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عاداتي"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
