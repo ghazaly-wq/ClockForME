@@ -36,6 +36,32 @@ public struct DayKey: Hashable, Comparable, Codable, Sendable {
         return DayKey(date: moved, calendar: calendar)
     }
 
+    /// Parses `yyyy-MM-dd` (the format of `isoString`).
+    public init?(isoString: String) {
+        let parts = isoString.split(separator: "-")
+        guard
+            parts.count == 3,
+            let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
+            (1...12).contains(month), (1...31).contains(day)
+        else { return nil }
+        self.init(year: year, month: month, day: day)
+    }
+
+    /// Day of the week (Sunday-based numbering, independent of `firstWeekday`).
+    public func weekday(calendar: Calendar) -> Weekday? {
+        guard let date = calendar.date(from: DateComponents(year: year, month: month, day: day)) else { return nil }
+        return Weekday(rawValue: calendar.component(.weekday, from: date))
+    }
+
+    /// Number of days in this day's month.
+    public func daysInMonth(calendar: Calendar) -> Int {
+        guard
+            let first = calendar.date(from: DateComponents(year: year, month: month, day: 1)),
+            let range = calendar.range(of: .day, in: .month, for: first)
+        else { return 31 }
+        return range.count
+    }
+
     /// `yyyy-MM-dd`, handy for stable identifiers.
     public var isoString: String {
         func pad(_ n: Int, _ width: Int) -> String {
