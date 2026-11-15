@@ -11,24 +11,60 @@ struct PagesView: View {
     @Query(sort: [SortDescriptor(\PageRecord.sortOrder), SortDescriptor(\PageRecord.createdAt)])
     private var allRecords: [PageRecord]
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var openID: UUID?
+    @State private var lastOpenID: UUID?
+    @State private var width: CGFloat = 393
     @State private var showNew = false
 
     private var pages: [PageRecord] { allRecords.filter { !$0.isTemplate } }
+    private var isOpen: Bool { openID != nil }
+    private var detailRecord: PageRecord? {
+        guard let id = openID ?? lastOpenID else { return nil }
+        return pages.first { $0.id == id }
+    }
 
     var body: some View {
-        Group {
-            if let openID, let record = pages.first(where: { $0.id == openID }) {
+        // The list and the opened page sit side by side in plain screen coordinates (left-to-right, like the
+        // tab pager). Opening slides the page in from the left (forward in this RTL app) while the list drifts
+        // the other way and dims; closing reverses it. The shared header morphs by itself.
+        ZStack {
+            list
+                .environment(\.headerEnabled, !isOpen)
+                .environment(\.layoutDirection, .rightToLeft)
+                .background(Theme.surface)
+                .offset(x: isOpen ? (reduceMotion ? 0 : width * 0.28) : 0)
+                .opacity(isOpen ? (reduceMotion ? 0 : 0.5) : 1)
+                .allowsHitTesting(!isOpen)
+                .accessibilityHidden(isOpen)
+            if let record = detailRecord {
                 PageDetailView(record: record, onBack: { self.openID = nil }, onOpen: { self.openID = $0 })
                     .id(record.id)
+                    .environment(\.headerEnabled, isOpen)
+                    .environment(\.layoutDirection, .rightToLeft)
                     .background(Theme.surface)
-                    .pushDetailTransition()
-            } else {
-                list
-                    .pushBackgroundTransition()
+                    .offset(x: isOpen ? 0 : (reduceMotion ? 0 : -width))
+                    .opacity(isOpen || !reduceMotion ? 1 : 0)
+                    .allowsHitTesting(isOpen)
+                    .accessibilityHidden(!isOpen)
             }
         }
-        .pushAnimation(value: openID)
+        .environment(\.layoutDirection, .leftToRight)
+        .clipped()
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = max($0, 1) }
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : .smooth(duration: 0.38), value: openID)
+        .onChange(of: openID) { _, new in
+            if let new {
+                lastOpenID = new
+            } else {
+                // Keep the page alive until its slide-out has finished.
+                let closing = lastOpenID
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(0.5))
+                    if openID == nil, lastOpenID == closing { lastOpenID = nil }
+                }
+            }
+        }
         // Alarms, tasks and links can ask to open a page.
         .onChange(of: router.openPageID, initial: true) { _, newValue in
             if let newValue {

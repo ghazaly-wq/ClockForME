@@ -21,6 +21,7 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageWidth: CGFloat = 393
     @State private var dragX: CGFloat = 0
+    @State private var headerConfigs: [AppTab: HeaderConfig] = [:]
     @State private var refreshTick = 0
 
     /// Anything that should make the notification plan be rebuilt.
@@ -82,6 +83,21 @@ struct RootView: View {
         }
     }
 
+    private var headerMorphKey: String {
+        router.selectedTab.rawValue + "|" + (headerConfigs[router.selectedTab]?.titleKey ?? "")
+            + "|" + (headerConfigs[router.selectedTab]?.subtitle ?? "")
+    }
+
+    @ViewBuilder
+    private var sharedHeader: some View {
+        if let config = headerConfigs[router.selectedTab] {
+            CurvedHeader(
+                title: config.title, subtitle: config.subtitle,
+                onAdd: config.onAdd, onBack: config.onBack, extraButtons: config.extraButtons
+            ) { router.showSettings = true }
+        }
+    }
+
     var body: some View {
         @Bindable var router = router
 
@@ -91,10 +107,14 @@ struct RootView: View {
             // Dragging from a screen edge moves the pages with the finger, so half of each shows;
             // tapping a tab slides to it. All tabs stay alive, so each keeps its own state.
             // With Reduce Motion the pages cross-fade in place instead.
+            VStack(spacing: 0) {
+            // One header for every page: it stays put and morphs (height, title, buttons) to the page shown.
+            sharedHeader
             ZStack {
                 ForEach(AppTab.allCases) { tab in
                     let isCurrent = tab == router.selectedTab
                     page(for: tab)
+                        .environment(\.pageTab, tab)
                         .environment(\.layoutDirection, .rightToLeft)
                         .background(Theme.surface)
                         .offset(x: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX)
@@ -109,6 +129,9 @@ struct RootView: View {
             .animation(reduceMotion ? .easeInOut(duration: 0.15) : .smooth(duration: 0.38), value: router.selectedTab)
             .overlay(alignment: .leading) { edgeSwipeStrip }
             .overlay(alignment: .trailing) { edgeSwipeStrip }
+            }
+            .onPreferenceChange(HeaderPreferenceKey.self) { headerConfigs = $0 }
+            .animation(reduceMotion ? nil : .smooth(duration: 0.4), value: headerMorphKey)
 
             if router.showDayComplete {
                 DayCompleteOverlay()
