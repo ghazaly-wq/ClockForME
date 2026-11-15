@@ -4,6 +4,7 @@ public enum ShopCategory: String, CaseIterable, Sendable {
     case theme      // accent colors
     case frame      // level-card frame
     case effect     // celebration effect
+    case liveStyle  // Live Activity / widget progress bar style
 }
 
 public struct ShopItem: Identifiable, Equatable, Sendable {
@@ -29,6 +30,7 @@ public enum ShopCatalog {
     public static let defaultTheme = "theme.default"
     public static let defaultFrame = "frame.none"
     public static let defaultEffect = "effect.confetti"
+    public static let defaultLiveStyle = "live.default"
 
     public static let all: [ShopItem] = [
         ShopItem(id: "theme.default", category: .theme, name: "الافتراضي", price: 0),
@@ -45,7 +47,11 @@ public enum ShopCatalog {
 
         ShopItem(id: "effect.confetti", category: .effect, name: "قصاصات ملونة", price: 0),
         ShopItem(id: "effect.gold", category: .effect, name: "مطر ذهبي", price: 50, requiredLevel: 5),
-        ShopItem(id: "effect.stars", category: .effect, name: "نجوم", price: 60, requiredLevel: 8)
+        ShopItem(id: "effect.stars", category: .effect, name: "نجوم", price: 60, requiredLevel: 8),
+
+        ShopItem(id: "live.default", category: .liveStyle, name: "شرائح مستديرة", price: 0),
+        ShopItem(id: "live.blocks", category: .liveStyle, name: "مربعات", price: 40, requiredLevel: 3),
+        ShopItem(id: "live.dots", category: .liveStyle, name: "دوائر", price: 50, requiredLevel: 5)
     ]
 
     public static func item(id: String) -> ShopItem? { all.first { $0.id == id } }
@@ -57,6 +63,7 @@ public enum ShopCatalog {
         case .theme: return defaultTheme
         case .frame: return defaultFrame
         case .effect: return defaultEffect
+        case .liveStyle: return defaultLiveStyle
         }
     }
 

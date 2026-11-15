@@ -11,6 +11,7 @@ struct ShopSection: View {
     @AppStorage(SettingsKey.equippedTheme) private var theme = ShopCatalog.defaultTheme
     @AppStorage(SettingsKey.equippedFrame) private var frame = ShopCatalog.defaultFrame
     @AppStorage(SettingsKey.equippedEffect) private var effect = ShopCatalog.defaultEffect
+    @AppStorage(SettingsKey.equippedLiveStyle) private var liveStyle = ShopCatalog.defaultLiveStyle
 
     private var owned: Set<String> { Set(purchases.map(\.itemID)) }
 
@@ -23,6 +24,7 @@ struct ShopSection: View {
             section("ألوان التطبيق", .theme)
             section("إطارات بطاقة المستوى", .frame)
             section("تأثير الاحتفال", .effect)
+            section("شكل شريط التقدم (شاشة القفل والويدجت)", .liveStyle)
         }
     }
 
@@ -42,6 +44,7 @@ struct ShopSection: View {
         case .theme: return theme
         case .frame: return frame
         case .effect: return effect
+        case .liveStyle: return liveStyle
         }
     }
 
@@ -50,6 +53,7 @@ struct ShopSection: View {
         case .theme: theme = item.id
         case .frame: frame = item.id
         case .effect: effect = item.id
+        case .liveStyle: liveStyle = item.id
         }
     }
 
@@ -132,6 +136,9 @@ struct ShopSection: View {
                         Image(systemName: "nosign").foregroundStyle(Theme.textSecondary)
                     }
                 }
+        case .liveStyle:
+            SegmentBar(segments: [true, true, false], styleID: item.id, height: 8)
+                .padding(.horizontal, 4)
         case .effect:
             Image(systemName: item.id == "effect.stars" ? "sparkles" : "party.popper.fill")
                 .font(.title2)

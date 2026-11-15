@@ -18,6 +18,8 @@ struct HomeView: View {
     @Query private var unlocks: [AchievementUnlockRecord]
     @Query private var purchases: [PurchaseRecord]
     @Query private var rewards: [RewardRecord]
+    @AppStorage(SettingsKey.equippedLiveStyle) private var liveStyle = ShopCatalog.defaultLiveStyle
+    private let live = LiveActivityController.shared
 
     @State private var now = Date()
     @State private var taskSheet: EditorTarget?
@@ -59,6 +61,7 @@ struct HomeView: View {
                 HomeGoalsCard(snapshot: snapshot, rewards: rewards)
                 RecentAchievementsCard(unlocks: unlocks)
                 quickActions
+                liveActivityCard(snapshot: snapshot, provider: provider)
             }
         }
         .sheet(item: $taskSheet) { target in
@@ -264,6 +267,49 @@ struct HomeView: View {
         .buttonStyle(.bordered)
         .font(.subheadline.bold())
         .tint(Theme.primaryStrong)
+    }
+
+    // MARK: - Live Activity
+
+    @ViewBuilder
+    private func liveActivityCard(snapshot: ProgressSnapshot, provider: AdhanPrayerTimes?) -> some View {
+        if snapshot.todayMain.total > 0 {
+            card {
+                if live.isRunning {
+                    Label("مهماتك ظاهرة على شاشة القفل", systemImage: "lock.iphone")
+                        .font(.callout)
+                        .foregroundStyle(Theme.textPrimary)
+                    Button {
+                        Task { await live.stopForToday(dayKey: snapshot.today.isoString) }
+                    } label: {
+                        Text("إيقاف لليوم")
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(Theme.primaryStrong)
+                } else {
+                    Button {
+                        startDay(provider: provider)
+                    } label: {
+                        Label("ابدأ يومك", systemImage: "play.fill")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+        }
+    }
+
+    private func startDay(provider: AdhanPrayerTimes?) {
+        let now = Date()
+        let output = WidgetSnapshotBuilder.make(
+            tasks: tasks, completions: completions, alarms: alarms,
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards),
+            now: now, dayStartHour: dayStartHour, provider: provider,
+            styleID: liveStyle, arabicDigits: digits == .arabicIndic
+        )
+        Task { await live.startManually(output, now: now) }
     }
 
     // MARK: - Data

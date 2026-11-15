@@ -14,6 +14,12 @@ enum SettingsKey {
     static let equippedTheme = "equippedTheme"
     static let equippedFrame = "equippedFrame"
     static let equippedEffect = "equippedEffect"
+    static let equippedLiveStyle = "equippedLiveStyle"
+    static let liveActivityEnabled = "liveActivityEnabled"
+    static let liveActivityAutoStart = "liveActivityAutoStart"
+    static let morningEnabled = "morningReminderEnabled"
+    static let morningHour = "morningReminderHour"
+    static let morningMinute = "morningReminderMinute"
 }
 
 extension AppearanceMode {
