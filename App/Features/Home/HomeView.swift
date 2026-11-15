@@ -17,6 +17,7 @@ struct HomeView: View {
     @Query(sort: \AlarmRecord.createdAt) private var alarms: [AlarmRecord]
     @Query private var unlocks: [AchievementUnlockRecord]
     @Query private var purchases: [PurchaseRecord]
+    @Query private var pageSessions: [PageSessionRecord]
     @Query private var rewards: [RewardRecord]
     @Query private var pageRecords: [PageRecord]
     @AppStorage(SettingsKey.equippedLiveStyle) private var liveStyle = ShopCatalog.defaultLiveStyle
@@ -32,7 +33,7 @@ struct HomeView: View {
         let calendar = Calendar.app
         let snapshot = ProgressSnapshot.make(
             tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour, calendar: calendar,
-            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards, pages: pageRecords, sessions: pageSessions)
         )
         let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
@@ -328,7 +329,7 @@ struct HomeView: View {
         let now = Date()
         let output = WidgetSnapshotBuilder.make(
             tasks: tasks, completions: completions, alarms: alarms,
-            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards),
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards, pages: pageRecords, sessions: pageSessions),
             now: now, dayStartHour: dayStartHour, provider: provider,
             styleID: liveStyle, arabicDigits: digits == .arabicIndic
         )

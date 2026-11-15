@@ -2,6 +2,11 @@ import Foundation
 import HabitCore
 import SwiftData
 
+extension Notification.Name {
+    /// Posted when something outside tasks (custom pages) may have earned an achievement.
+    static let achievementsNeedSync = Notification.Name("achievementsNeedSync")
+}
+
 @MainActor
 enum AchievementActions {
     struct SyncResult {

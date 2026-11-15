@@ -17,6 +17,8 @@ extension Calendar {
 struct ProgressExtras {
     var unlockedIDs: Set<String> = []
     var spentPoints = 0
+    var pagesCreated = 0
+    var pageSessions = 0
 
     static let zero = ProgressExtras()
 
@@ -25,9 +27,14 @@ struct ProgressExtras {
         self.spentPoints = spentPoints
     }
 
-    init(unlocks: [AchievementUnlockRecord], purchases: [PurchaseRecord], rewards: [RewardRecord]) {
+    init(
+        unlocks: [AchievementUnlockRecord], purchases: [PurchaseRecord], rewards: [RewardRecord],
+        pages: [PageRecord] = [], sessions: [PageSessionRecord] = []
+    ) {
         unlockedIDs = Set(unlocks.map(\.achievementID))
         spentPoints = purchases.reduce(0) { $0 + $1.price } + rewards.reduce(0) { $0 + $1.claimedCost }
+        pagesCreated = pages.filter { !$0.isTemplate }.count
+        pageSessions = sessions.filter(\.isFinished).count
     }
 
     @MainActor
@@ -35,7 +42,9 @@ struct ProgressExtras {
         let unlocks = (try? context.fetch(FetchDescriptor<AchievementUnlockRecord>())) ?? []
         let purchases = (try? context.fetch(FetchDescriptor<PurchaseRecord>())) ?? []
         let rewards = (try? context.fetch(FetchDescriptor<RewardRecord>())) ?? []
-        return ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
+        let pages = (try? context.fetch(FetchDescriptor<PageRecord>())) ?? []
+        let sessions = (try? context.fetch(FetchDescriptor<PageSessionRecord>())) ?? []
+        return ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards, pages: pages, sessions: sessions)
     }
 }
 
@@ -53,6 +62,10 @@ struct ProgressSnapshot {
     let progressByDay: [DayKey: DayProgress]
     let completedTasks: Int
     let unlockedIDs: Set<String>
+    let secondaryCompleted: Int
+    let timing: AchievementTiming.Counts
+    let pagesCreated: Int
+    let pageSessions: Int
 
     var achievementStats: AchievementStats {
         AchievementStats(
@@ -62,7 +75,13 @@ struct ProgressSnapshot {
             bestStreak: streak.best,
             longestCompleteRun: history.longestCompleteRun,
             comebacks: history.comebacks,
-            baseLevel: baseSummary.level
+            baseLevel: baseSummary.level,
+            secondaryTasks: secondaryCompleted,
+            biggestCompleteDay: history.biggestCompleteDay,
+            earlyBirdDays: timing.earlyBirdDays,
+            nightFinisherDays: timing.nightFinisherDays,
+            pagesCreated: pagesCreated,
+            pageSessions: pageSessions
         )
     }
 
@@ -121,6 +140,21 @@ struct ProgressSnapshot {
         let todayMain = progressByDay[today]
             ?? DayProgress.compute(day: today, specs: specs, completedIDs: completedByDay[today] ?? [], calendar: calendar)
 
+        let mainIDs = Set(tasks.filter { $0.kind == .main }.map(\.id))
+        let secondaryCompleted = completions.filter { !mainIDs.contains($0.taskID) }.count
+        var finishedAt: [DayKey: Date] = [:]
+        for completion in completions where mainIDs.contains(completion.taskID) {
+            guard progressByDay[completion.day]?.state == .complete else { continue }
+            finishedAt[completion.day] = max(finishedAt[completion.day] ?? .distantPast, completion.completedAt)
+        }
+        let defaults = UserDefaults.standard
+        let provider: AdhanPrayerTimes? = defaults.bool(forKey: SettingsKey.hasPrayerLocation)
+            ? AdhanPrayerTimes(
+                latitude: defaults.double(forKey: SettingsKey.prayerLatitude),
+                longitude: defaults.double(forKey: SettingsKey.prayerLongitude))
+            : nil
+        let timing = AchievementTiming.counts(finishedAt: finishedAt, provider: provider, calendar: calendar)
+
         return ProgressSnapshot(
             today: today,
             todayMain: todayMain,
@@ -130,7 +164,11 @@ struct ProgressSnapshot {
             history: history,
             progressByDay: progressByDay,
             completedTasks: completions.count,
-            unlockedIDs: extras.unlockedIDs
+            unlockedIDs: extras.unlockedIDs,
+            secondaryCompleted: secondaryCompleted,
+            timing: timing,
+            pagesCreated: extras.pagesCreated,
+            pageSessions: extras.pageSessions
         )
     }
 }

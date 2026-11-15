@@ -46,6 +46,7 @@ enum PageActions {
         let record = PageRecord(definition: page, sortOrder: order)
         context.insert(record)
         try? context.save()
+        NotificationCenter.default.post(name: .achievementsNeedSync, object: nil)
         return record
     }
 
@@ -222,6 +223,7 @@ enum PageActions {
             context.insert(PageSessionRecord(session: session))
         }
         try? context.save()
+        if session.isFinished { NotificationCenter.default.post(name: .achievementsNeedSync, object: nil) }
     }
 
     /// Completes the page's linked main task for today, if it is scheduled today and not done yet.

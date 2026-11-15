@@ -134,6 +134,9 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
             refreshTick += 1
         }
+        .onReceive(NotificationCenter.default.publisher(for: .achievementsNeedSync)) { _ in
+            refreshTick += 1
+        }
     }
 
     @ViewBuilder

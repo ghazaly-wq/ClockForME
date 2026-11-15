@@ -10,6 +10,8 @@ struct AchievementsView: View {
     @Query private var completions: [CompletionRecord]
     @Query private var unlocks: [AchievementUnlockRecord]
     @Query private var purchases: [PurchaseRecord]
+    @Query private var pages: [PageRecord]
+    @Query private var pageSessions: [PageSessionRecord]
     @Query(sort: \RewardRecord.createdAt) private var rewards: [RewardRecord]
     @State private var showStats = false
     @State private var rewardEditor: RewardEditorTarget?
@@ -18,7 +20,7 @@ struct AchievementsView: View {
         @Bindable var router = router
         let snapshot = ProgressSnapshot.make(
             tasks: tasks, completions: completions, now: Date(), dayStartHour: dayStartHour,
-            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards)
+            extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards, pages: pages, sessions: pageSessions)
         )
 
         CurvedPage(title: "الإنجازات", onAdd: router.achievementsSegment == .rewards ? { rewardEditor = .new } : nil) {

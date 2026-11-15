@@ -6,10 +6,13 @@ public struct HistoryStats: Equatable, Sendable {
     public let longestCompleteRun: Int
     /// Times the owner completed a day right after being away for at least the grace period.
     public let comebacks: Int
+    /// Most main tasks in a single complete day.
+    public let biggestCompleteDay: Int
 
-    public init(longestCompleteRun: Int, comebacks: Int) {
+    public init(longestCompleteRun: Int, comebacks: Int, biggestCompleteDay: Int = 0) {
         self.longestCompleteRun = longestCompleteRun
         self.comebacks = comebacks
+        self.biggestCompleteDay = biggestCompleteDay
     }
 
     public static func compute(
@@ -21,7 +24,7 @@ public struct HistoryStats: Equatable, Sendable {
         guard let first = progressByDay.keys.min(), first <= today else {
             return HistoryStats(longestCompleteRun: 0, comebacks: 0)
         }
-        var run = 0, bestRun = 0, missed = 0, comebacks = 0
+        var run = 0, bestRun = 0, missed = 0, comebacks = 0, biggest = 0
         var day = first
         while day <= today {
             let state = progressByDay[day]?.state ?? .noTasks
@@ -34,6 +37,7 @@ public struct HistoryStats: Equatable, Sendable {
                 missed = 0
                 run += 1
                 bestRun = max(bestRun, run)
+                biggest = max(biggest, progressByDay[day]?.total ?? 0)
             case .partial:
                 if !isToday { missed = 0; run = 0 }
             case .none:
@@ -42,7 +46,7 @@ public struct HistoryStats: Equatable, Sendable {
             guard let next = day.adding(days: 1, calendar: calendar) else { break }
             day = next
         }
-        return HistoryStats(longestCompleteRun: bestRun, comebacks: comebacks)
+        return HistoryStats(longestCompleteRun: bestRun, comebacks: comebacks, biggestCompleteDay: biggest)
     }
 }
 
