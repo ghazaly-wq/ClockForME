@@ -31,7 +31,9 @@ struct AlarmEditorView: View {
     @State private var note = ""
     @State private var timeKind: TimeKind = .clock
     @State private var clockTime = Date()
-    @State private var prayer: Prayer = .fajr
+    @State private var prayers: Set<Prayer> = [.fajr]
+    @State private var hasEnd = false
+    @State private var endDate = Calendar.app.date(byAdding: .day, value: 2, to: Date()) ?? Date()
     @State private var direction: Direction = .before
     @State private var offsetHours = 0
     @State private var offsetMinutes = 30
@@ -59,10 +61,14 @@ struct AlarmEditorView: View {
             _clockTime = State(initialValue: calendar.date(bySettingHour: hour, minute: minute, second: 0, of: Date()) ?? Date())
         case let .prayer(prayer, direction, hours, minutes):
             _timeKind = State(initialValue: .prayer)
-            _prayer = State(initialValue: prayer)
+            _prayers = State(initialValue: Set(alarm.rule.prayers.isEmpty ? [prayer] : alarm.rule.prayers))
             _direction = State(initialValue: direction)
             _offsetHours = State(initialValue: hours)
             _offsetMinutes = State(initialValue: minutes)
+        }
+        if let end = alarm.endDay {
+            _hasEnd = State(initialValue: true)
+            _endDate = State(initialValue: calendar.date(from: DateComponents(year: end.year, month: end.month, day: end.day)) ?? Date())
         }
         switch alarm.repetition {
         case .once(let day):
@@ -83,6 +89,7 @@ struct AlarmEditorView: View {
     }
 
     private var canSave: Bool {
+        if timeKind == .prayer && prayers.isEmpty { return false }
         switch repeatKind {
         case .weekly: return !weekdays.isEmpty
         case .monthly: return !monthDays.isEmpty
@@ -96,8 +103,15 @@ struct AlarmEditorView: View {
             let parts = Calendar.app.dateComponents([.hour, .minute], from: clockTime)
             return .clock(hour: parts.hour ?? 7, minute: parts.minute ?? 0)
         case .prayer:
-            return .prayer(prayer, direction, hours: offsetHours, minutes: offsetMinutes)
+            return .prayer(orderedPrayers.first ?? .fajr, direction, hours: offsetHours, minutes: offsetMinutes)
         }
+    }
+
+    private var orderedPrayers: [Prayer] { Prayer.allCases.filter { prayers.contains($0) } }
+
+    /// The alarm as it would be saved right now (used for the live wording under the prayer controls).
+    private var previewRule: AlarmRule {
+        AlarmRule(title: "", repetition: .daily, time: timeSpec, extraPrayers: Array(orderedPrayers.dropFirst()))
     }
 
     var body: some View {
@@ -129,6 +143,24 @@ struct AlarmEditorView: View {
                     }
                     .pickerStyle(.segmented)
                     repeatDetails
+                }
+
+                if repeatKind != .once {
+                    Section {
+                        Toggle("نهاية الروتين", isOn: $hasEnd.animation())
+                        if hasEnd {
+                            DatePicker(
+                                "آخر يوم يرن فيه",
+                                selection: $endDate,
+                                in: Calendar.app.startOfDay(for: Date())...Date.distantFuture,
+                                displayedComponents: .date
+                            )
+                        }
+                    } footer: {
+                        Text(hasEnd
+                             ? "التنبيه (والمهمة المرتبطة فيه) يوقف بعد هذا اليوم تلقائياً."
+                             : "بدون نهاية: يستمر يرن لين تحذفه أو توقفه.")
+                    }
                 }
 
                 Section {
@@ -170,9 +202,16 @@ struct AlarmEditorView: View {
 
     @ViewBuilder
     private var prayerControls: some View {
-        Picker("الصلاة", selection: $prayer) {
-            ForEach(Prayer.allCases, id: \.self) { prayer in
-                Text(AlarmText.name(of: prayer)).tag(prayer)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("الصلاة (تقدر تختار أكثر من وحدة)")
+                .font(.subheadline)
+                .foregroundStyle(Theme.textSecondary)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 8)], spacing: 8) {
+                ForEach(Prayer.allCases, id: \.self) { prayer in
+                    ChoiceChip(label: AlarmText.name(of: prayer), isSelected: prayers.contains(prayer)) {
+                        if prayers.contains(prayer) { prayers.remove(prayer) } else { prayers.insert(prayer) }
+                    }
+                }
             }
         }
         Picker("متى", selection: $direction) {
@@ -186,7 +225,7 @@ struct AlarmEditorView: View {
         Picker("الدقائق", selection: $offsetMinutes) {
             ForEach(0...59, id: \.self) { Text(digits.format($0)).tag($0) }
         }
-        Text(AlarmText.summary(of: timeSpec, digits: digits))
+        Text(AlarmText.summary(of: previewRule, digits: digits))
             .font(.callout.bold())
             .foregroundStyle(Theme.primaryStrong)
         if !hasLocation {
@@ -266,7 +305,9 @@ struct AlarmEditorView: View {
             isEnabled: true,
             repetition: repetition,
             time: timeSpec,
-            isMainTask: isMainTask
+            isMainTask: isMainTask,
+            extraPrayers: timeKind == .prayer ? Array(orderedPrayers.dropFirst()) : [],
+            endDay: (repeatKind != .once && hasEnd) ? DayKey(date: endDate, calendar: calendar) : nil
         )
 
         let record: AlarmRecord

@@ -15,6 +15,10 @@ final class AlarmRecord {
     var createdAt: Date
     /// The custom page this alarm belongs to, if any.
     var linkedPageID: UUID? = nil
+    /// JSON of `[Prayer]`: more prayers that ring with the same offset (nil = just the main one).
+    var extraPrayersData: Data? = nil
+    /// Last day a routine still rings (`yyyy-MM-dd`), nil = never ends.
+    var endDayISO: String? = nil
 
     init(rule: AlarmRule, createdAt: Date = Date()) {
         self.id = rule.id
@@ -26,6 +30,8 @@ final class AlarmRecord {
         self.isMainTask = rule.isMainTask
         self.createdAt = createdAt
         self.linkedPageID = rule.linkedPageID
+        self.extraPrayersData = rule.extraPrayers.isEmpty ? nil : (try? JSONEncoder().encode(rule.extraPrayers))
+        self.endDayISO = rule.endDay?.isoString
     }
 }
 
@@ -40,8 +46,18 @@ extension AlarmRecord {
         set { timeData = (try? JSONEncoder().encode(newValue)) ?? timeData }
     }
 
+    var extraPrayers: [Prayer] {
+        guard let data = extraPrayersData else { return [] }
+        return (try? JSONDecoder().decode([Prayer].self, from: data)) ?? []
+    }
+
+    var endDay: DayKey? { endDayISO.flatMap { DayKey(isoString: $0) } }
+
     var rule: AlarmRule {
-        AlarmRule(id: id, title: title, note: note, isEnabled: isEnabled, repetition: repetition, time: time, isMainTask: isMainTask, linkedPageID: linkedPageID)
+        AlarmRule(
+            id: id, title: title, note: note, isEnabled: isEnabled, repetition: repetition, time: time,
+            isMainTask: isMainTask, linkedPageID: linkedPageID, extraPrayers: extraPrayers, endDay: endDay
+        )
     }
 
     func apply(_ rule: AlarmRule) {
@@ -52,10 +68,12 @@ extension AlarmRecord {
         time = rule.time
         isMainTask = rule.isMainTask
         linkedPageID = rule.linkedPageID
+        extraPrayersData = rule.extraPrayers.isEmpty ? nil : (try? JSONEncoder().encode(rule.extraPrayers))
+        endDayISO = rule.endDay?.isoString
     }
 
     /// Changes whenever anything that affects notifications changes.
     var fingerprint: String {
-        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(linkedPageID?.uuidString ?? "")|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())"
+        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(linkedPageID?.uuidString ?? "")|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())|\(extraPrayersData?.base64EncodedString() ?? "")|\(endDayISO ?? "")"
     }
 }

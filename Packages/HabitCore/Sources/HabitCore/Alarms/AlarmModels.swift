@@ -24,6 +24,10 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     public var isMainTask: Bool
     /// Set when the alarm belongs to a custom page (stopping it opens that page).
     public var linkedPageID: UUID?
+    /// More prayers that ring with the same before/after offset as `time` (which must then be prayer-based).
+    public var extraPrayers: [Prayer]
+    /// Last day a weekly/monthly routine still rings (inclusive). `nil` = never ends.
+    public var endDay: DayKey?
 
     public init(
         id: UUID = UUID(),
@@ -33,7 +37,9 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         repetition: Repetition,
         time: TimeSpec,
         isMainTask: Bool = false,
-        linkedPageID: UUID? = nil
+        linkedPageID: UUID? = nil,
+        extraPrayers: [Prayer] = [],
+        endDay: DayKey? = nil
     ) {
         self.id = id
         self.title = title
@@ -43,5 +49,31 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         self.time = time
         self.isMainTask = isMainTask
         self.linkedPageID = linkedPageID
+        self.extraPrayers = extraPrayers
+        self.endDay = endDay
+    }
+
+    /// Every prayer this alarm follows, the main one first. Empty for clock alarms.
+    public var prayers: [Prayer] {
+        guard case let .prayer(first, _, _, _) = time else { return [] }
+        return [first] + extraPrayers.filter { $0 != first }
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, note, isEnabled, repetition, time, isMainTask, linkedPageID, extraPrayers, endDay
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        note = try c.decode(String.self, forKey: .note)
+        isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        repetition = try c.decode(Repetition.self, forKey: .repetition)
+        time = try c.decode(TimeSpec.self, forKey: .time)
+        isMainTask = try c.decode(Bool.self, forKey: .isMainTask)
+        linkedPageID = try c.decodeIfPresent(UUID.self, forKey: .linkedPageID)
+        extraPrayers = try c.decodeIfPresent([Prayer].self, forKey: .extraPrayers) ?? []
+        endDay = try c.decodeIfPresent(DayKey.self, forKey: .endDay)
     }
 }

@@ -42,6 +42,7 @@ enum AlarmActions {
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, sortOrder: order)
             task.alarmID = alarm.id
             task.time = alarm.time
+            task.routineEnd = alarm.endDay
             context.insert(task)
             try? context.save()
             return
@@ -55,10 +56,12 @@ enum AlarmActions {
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, notes: linked.notes, sortOrder: linked.sortOrder)
             task.alarmID = alarm.id
             task.time = alarm.time
+            task.routineEnd = alarm.endDay
             context.insert(task)
         } else {
             linked.title = alarm.title
             linked.time = alarm.time
+            linked.routineEnd = alarm.endDay
             linked.kind = .main
             linked.repetition = repetition
             if case .once(let day) = repetition {

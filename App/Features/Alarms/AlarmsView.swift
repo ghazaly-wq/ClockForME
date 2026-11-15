@@ -119,8 +119,8 @@ struct AlarmsView: View {
             timeText = entry.shownAt.map { AlarmText.time($0, digits: digits) } ?? "—"
         }
         let detail = alarm.time.isPrayerBased
-            ? AlarmText.summary(of: alarm.time, digits: digits) + " · " + RepetitionText.summary(of: alarm.repetition, digits: digits)
-            : RepetitionText.summary(of: alarm.repetition, digits: digits)
+            ? AlarmText.summary(of: alarm.rule, digits: digits) + " · " + RepetitionText.summary(of: alarm.repetition, digits: digits) + AlarmText.endSuffix(of: alarm.rule, digits: digits)
+            : RepetitionText.summary(of: alarm.repetition, digits: digits) + AlarmText.endSuffix(of: alarm.rule, digits: digits)
 
         return HStack(spacing: 8) {
             Button { openAlarm(alarm) } label: {
@@ -253,6 +253,7 @@ struct AlarmsView: View {
     private func shownTime(of alarm: AlarmRecord, calendar: Calendar) -> Date? {
         var rule = alarm.rule
         rule.repetition = .daily
+        rule.endDay = nil
         return NotificationPlanner.fireDate(of: rule, on: DayKey(date: now, calendar: calendar), provider: provider, calendar: calendar)
     }
 

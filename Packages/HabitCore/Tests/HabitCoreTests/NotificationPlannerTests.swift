@@ -103,6 +103,37 @@ final class NotificationPlannerTests: XCTestCase {
         let data = try JSONEncoder().encode(rule)
         XCTAssertEqual(try JSONDecoder().decode(AlarmRule.self, from: data), rule)
     }
+
+    func testSeveralPrayersRingSeparatelyWithSameOffset() {
+        var alarm = AlarmRule(title: "p", repetition: .daily, time: .prayer(.asr, .after, hours: 0, minutes: 10))
+        alarm.extraPrayers = [.fajr, .asr]   // duplicate of the main prayer is ignored
+        let day = DayKey(year: 2026, month: 3, day: 11)
+        XCTAssertEqual(alarm.prayers, [.asr, .fajr])
+        XCTAssertEqual(
+            NotificationPlanner.fireDates(of: alarm, on: day, provider: provider, calendar: cal),
+            [date(2026, 3, 11, 5, 10), date(2026, 3, 11, 15, 10)]
+        )
+        XCTAssertEqual(NotificationPlanner.fireDate(of: alarm, on: day, provider: provider, calendar: cal), date(2026, 3, 11, 5, 10))
+        let plan = NotificationPlanner.plan(alarms: [alarm], from: date(2026, 3, 11, 0, 0), days: 2, provider: provider, calendar: cal)
+        XCTAssertEqual(plan.count, 4)
+        XCTAssertEqual(Set(plan.map(\.identifier)).count, 4)
+    }
+
+    func testRoutineEndDayStopsAlarm() {
+        var alarm = AlarmRule(title: "study", repetition: .daily, time: .clock(hour: 20, minute: 0))
+        alarm.endDay = DayKey(year: 2026, month: 3, day: 12)
+        let plan = NotificationPlanner.plan(alarms: [alarm], from: date(2026, 3, 10, 0, 0), days: 14, provider: nil, calendar: cal)
+        XCTAssertEqual(plan.map(\.fireDate), [date(2026, 3, 10, 20, 0), date(2026, 3, 11, 20, 0), date(2026, 3, 12, 20, 0)])
+    }
+
+    func testOldEncodedAlarmStillDecodes() throws {
+        let alarm = AlarmRule(title: "x", repetition: .daily, time: .clock(hour: 7, minute: 0))
+        var obj = try JSONSerialization.jsonObject(with: JSONEncoder().encode(alarm)) as! [String: Any]
+        obj.removeValue(forKey: "extraPrayers"); obj.removeValue(forKey: "endDay")
+        let decoded = try JSONDecoder().decode(AlarmRule.self, from: JSONSerialization.data(withJSONObject: obj))
+        XCTAssertEqual(decoded.extraPrayers, [])
+        XCTAssertNil(decoded.endDay)
+    }
 }
 
 final class AdhanPrayerTimesTests: XCTestCase {

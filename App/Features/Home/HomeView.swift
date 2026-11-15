@@ -159,17 +159,17 @@ struct HomeView: View {
     private struct UpcomingAlarm: Identifiable {
         let alarm: AlarmRecord
         let fire: Date
-        var id: UUID { alarm.id }
+        var id: String { alarm.id.uuidString + fire.description }
     }
 
     private func upcomingAlarmsToday(provider: AdhanPrayerTimes?, calendar: Calendar) -> [UpcomingAlarm] {
         let day = DayKey(date: now, calendar: calendar)
         return alarms
             .filter(\.isEnabled)
-            .compactMap { alarm -> UpcomingAlarm? in
-                guard let fire = NotificationPlanner.fireDate(of: alarm.rule, on: day, provider: provider, calendar: calendar),
-                      fire > now else { return nil }
-                return UpcomingAlarm(alarm: alarm, fire: fire)
+            .flatMap { alarm -> [UpcomingAlarm] in
+                NotificationPlanner.fireDates(of: alarm.rule, on: day, provider: provider, calendar: calendar)
+                    .filter { $0 > now }
+                    .map { UpcomingAlarm(alarm: alarm, fire: $0) }
             }
             .sorted { $0.fire < $1.fire }
     }

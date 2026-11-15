@@ -20,22 +20,38 @@ public enum NotificationPlanner {
     public static let defaultHorizonDays = 14
 
     /// The moment an alarm rings on `day`, or nil if it doesn't occur that day
-    /// (or a prayer time is needed but unavailable).
+    /// (or a prayer time is needed but unavailable). With several prayers: the earliest one.
     public static func fireDate(
         of alarm: AlarmRule,
         on day: DayKey,
         provider: PrayerTimeProviding?,
         calendar: Calendar
     ) -> Date? {
-        guard alarm.repetition.occurs(on: day, calendar: calendar) else { return nil }
+        fireDates(of: alarm, on: day, provider: provider, calendar: calendar).first
+    }
+
+    /// Every moment an alarm rings on `day`, earliest first: one for a clock alarm,
+    /// one per chosen prayer for a prayer alarm. Empty when it doesn't occur that day
+    /// (including after the routine's end day) or prayer times are unavailable.
+    public static func fireDates(
+        of alarm: AlarmRule,
+        on day: DayKey,
+        provider: PrayerTimeProviding?,
+        calendar: Calendar
+    ) -> [Date] {
+        guard alarm.repetition.occurs(on: day, calendar: calendar) else { return [] }
+        if let end = alarm.endDay, day > end { return [] }
         switch alarm.time {
         case let .clock(hour, minute):
             let h = min(max(hour, 0), 23), m = min(max(minute, 0), 59)
-            return calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: h, minute: m))
-        case let .prayer(prayer, direction, hours, minutes):
-            guard let base = provider?.times(for: day, calendar: calendar)?[prayer] else { return nil }
+            return calendar.date(from: DateComponents(year: day.year, month: day.month, day: day.day, hour: h, minute: m)).map { [$0] } ?? []
+        case let .prayer(_, direction, hours, minutes):
+            guard let times = provider?.times(for: day, calendar: calendar) else { return [] }
             let offset = TimeInterval(max(hours, 0) * 3600 + max(minutes, 0) * 60)
-            return direction == .before ? base.addingTimeInterval(-offset) : base.addingTimeInterval(offset)
+            return alarm.prayers
+                .compactMap { times[$0] }
+                .map { direction == .before ? $0.addingTimeInterval(-offset) : $0.addingTimeInterval(offset) }
+                .sorted()
         }
     }
 
@@ -58,13 +74,13 @@ public enum NotificationPlanner {
         for offset in -1..<days {
             guard let day = today.adding(days: offset, calendar: calendar) else { continue }
             for alarm in enabled {
-                guard let fire = fireDate(of: alarm, on: day, provider: provider, calendar: calendar),
-                      fire > now else { continue }
-                result.append(PlannedNotification(
-                    identifier: "alarm.\(alarm.id.uuidString).\(stamp(fire, calendar: calendar))",
-                    alarmID: alarm.id,
-                    fireDate: fire
-                ))
+                for fire in fireDates(of: alarm, on: day, provider: provider, calendar: calendar) where fire > now {
+                    result.append(PlannedNotification(
+                        identifier: "alarm.\(alarm.id.uuidString).\(stamp(fire, calendar: calendar))",
+                        alarmID: alarm.id,
+                        fireDate: fire
+                    ))
+                }
             }
         }
         result.sort { ($0.fireDate, $0.identifier) < ($1.fireDate, $1.identifier) }

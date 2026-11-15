@@ -29,6 +29,30 @@ enum AlarmText {
         }
     }
 
+    /// Like `summary(of: TimeSpec)` but names every prayer of a multi-prayer alarm: "بعد العصر والمغرب بـ 10 دقائق".
+    static func summary(of rule: AlarmRule, digits: DigitStyle) -> String {
+        guard case let .prayer(_, direction, hours, minutes) = rule.time, rule.prayers.count > 1 else {
+            return summary(of: rule.time, digits: digits)
+        }
+        let names = rule.prayers.sorted { Prayer.allCases.firstIndex(of: $0)! < Prayer.allCases.firstIndex(of: $1)! }
+            .map { name(of: $0) }.joined(separator: " و")
+        let duration = durationText(hours: hours, minutes: minutes)
+        if duration.isEmpty { return String(localized: "عند \(names)") }
+        let text = direction == .before
+            ? String(localized: "قبل \(names) بـ \(duration)")
+            : String(localized: "بعد \(names) بـ \(duration)")
+        return digits.format(text)
+    }
+
+    /// " · حتى 15 نوفمبر" for a routine that ends, or " · انتهى الروتين" once that day has passed.
+    static func endSuffix(of rule: AlarmRule, digits: DigitStyle) -> String {
+        guard let end = rule.endDay else { return "" }
+        if case .once = rule.repetition { return "" }
+        let today = DayKey(date: Date(), calendar: Calendar.app)
+        if end < today { return " · " + String(localized: "انتهى الروتين") }
+        return " · " + digits.format(String(localized: "حتى \(RepetitionText.dateText(end))"))
+    }
+
     static func durationText(hours: Int, minutes: Int) -> String {
         var parts: [String] = []
         if hours > 0 { parts.append(unit(hours, one: "ساعة", two: "ساعتين", few: "ساعات", many: "ساعة")) }

@@ -24,6 +24,9 @@ final class TaskRecord {
     var timeData: Data? = nil
     /// The custom page this task belongs to (finishing the page's session completes it).
     var pageID: UUID? = nil
+    /// Last day of a routine that ends (inclusive), copied from the alarm it came from. Unlike `endDay` this is
+    /// not "stopped by the owner", so the task still counts as the alarm's active task.
+    var routineEndISO: String? = nil
 
     init(
         id: UUID = UUID(),
@@ -88,8 +91,18 @@ extension TaskRecord {
         set { endDayISO = newValue?.isoString }
     }
 
+    var routineEnd: DayKey? {
+        get { routineEndISO.flatMap { DayKey(isoString: $0) } }
+        set { routineEndISO = newValue?.isoString }
+    }
+
     var spec: TaskSpec {
-        TaskSpec(id: id, kind: kind, repetition: repetition, startDay: startDay, endDay: endDay)
+        // A routine end day (inclusive) acts like an exclusive stop on the day after it.
+        var stop = endDay
+        if let last = routineEnd, let after = last.adding(days: 1, calendar: Calendar.app) {
+            stop = stop.map { min($0, after) } ?? after
+        }
+        return TaskSpec(id: id, kind: kind, repetition: repetition, startDay: startDay, endDay: stop)
     }
 }
 
