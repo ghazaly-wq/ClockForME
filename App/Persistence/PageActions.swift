@@ -142,6 +142,7 @@ enum PageActions {
         } else {
             active.title = page.name
             active.time = schedule.time
+            active.routineEnd = schedule.endDay
             active.kind = .main
             active.repetition = schedule.repetition
             if case .once(let day) = schedule.repetition {
@@ -156,6 +157,7 @@ enum PageActions {
         let task = TaskRecord(title: page.name, kind: .main, repetition: schedule.repetition, startDay: start, notes: notes, sortOrder: order)
         task.pageID = page.id
         task.time = schedule.time
+        task.routineEnd = schedule.endDay
         context.insert(task)
     }
 

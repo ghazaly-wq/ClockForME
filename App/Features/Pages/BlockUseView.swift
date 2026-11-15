@@ -522,12 +522,12 @@ struct BlockUseView: View {
 
     @ViewBuilder
     private var progressBlock: some View {
-        let src = source()
-        let value = src.map { runtime.number($0.id) } ?? 0
-        let target = block.target ?? src?.target
+        let sources = block.sourceIDs.compactMap { id in page.allBlocks.first { $0.id == id } }
+        let value = sources.reduce(0) { $0 + runtime.number($1.id) }
+        let target = PageLogic.combinedTarget(explicit: block.target, sourceTargets: sources.map(\.target))
         let fraction = PageLogic.progress(value: value, target: target)
         label(block.title)
-        if src == nil {
+        if sources.isEmpty {
             Text("اختر الرقم اللي يتابعه الشريط من وضع التعديل.")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
@@ -550,6 +550,21 @@ struct BlockUseView: View {
                     Text(digits.format("\(Int((fraction * 100).rounded()))٪"))
                         .font(.callout.bold())
                         .foregroundStyle(Theme.primaryStrong)
+                }
+            }
+            if sources.count > 1 {
+                // What each followed counter contributes.
+                ForEach(sources) { src in
+                    HStack {
+                        Text(src.title.isEmpty ? src.kind.arabicName : src.title)
+                            .font(.caption)
+                            .foregroundStyle(Theme.textSecondary)
+                        Spacer()
+                        Text(fmt(runtime.number(src.id)))
+                            .font(.caption.bold())
+                            .monospacedDigit()
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
             }
         }

@@ -157,7 +157,15 @@ public enum PageLogic {
         guard let schedule = page.schedule else { return nil }
         return AlarmRule(
             id: existingID, title: page.name, repetition: schedule.repetition, time: schedule.time,
-            isMainTask: false, linkedPageID: page.id
+            isMainTask: false, linkedPageID: page.id, extraPrayers: schedule.extraPrayers, endDay: schedule.endDay
         )
+    }
+
+    /// The target of a progress bar that follows several numbers: the owner's own target if set,
+    /// otherwise the sum of the sources' targets (only when every source has one).
+    public static func combinedTarget(explicit: Double?, sourceTargets: [Double?]) -> Double? {
+        if let explicit { return explicit }
+        guard !sourceTargets.isEmpty, sourceTargets.allSatisfy({ $0 != nil }) else { return nil }
+        return sourceTargets.compactMap { $0 }.reduce(0, +)
     }
 }

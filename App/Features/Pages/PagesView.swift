@@ -102,7 +102,7 @@ struct PagesView: View {
         let accent = PageAccent(name: page.accent).color
         var lines: [String] = []
         if let schedule = page.schedule {
-            lines.append(RepetitionText.summary(of: schedule.repetition, digits: digits) + " · " + AlarmText.summary(of: schedule.time, digits: digits))
+            lines.append(RepetitionText.summary(of: schedule.repetition, digits: digits) + " · " + AlarmText.summary(of: AlarmRule(title: "", repetition: schedule.repetition, time: schedule.time, extraPrayers: schedule.extraPrayers, endDay: schedule.endDay), digits: digits) + AlarmText.endSuffix(of: AlarmRule(title: "", repetition: schedule.repetition, time: schedule.time, endDay: schedule.endDay), digits: digits))
         } else {
             lines.append("بدون موعد")
         }

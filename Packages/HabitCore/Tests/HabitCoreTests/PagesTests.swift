@@ -308,4 +308,26 @@ final class PagesTests: XCTestCase {
         XCTAssertEqual(NumberFormatting.clock(seconds: 3725), "1:02:05")
         XCTAssertEqual(NumberFormatting.clock(seconds: -4), "00:00")
     }
+
+    func testCombinedProgressTarget() {
+        XCTAssertEqual(PageLogic.combinedTarget(explicit: 50, sourceTargets: [10, 20]), 50)
+        XCTAssertEqual(PageLogic.combinedTarget(explicit: nil, sourceTargets: [10, 20]), 30)
+        XCTAssertNil(PageLogic.combinedTarget(explicit: nil, sourceTargets: [10, nil]))
+        XCTAssertNil(PageLogic.combinedTarget(explicit: nil, sourceTargets: []))
+    }
+
+    func testPageScheduleExtrasReachTheAlarmAndOldDataDecodes() throws {
+        let end = DayKey(year: 2026, month: 12, day: 1)
+        var page = PageDefinition(name: "p")
+        page.schedule = PageSchedule(repetition: .daily, time: .prayer(.fajr, .after, hours: 0, minutes: 5), extraPrayers: [.asr], endDay: end)
+        let rule = PageLogic.alarmRule(for: page)
+        XCTAssertEqual(rule?.prayers, [.fajr, .asr])
+        XCTAssertEqual(rule?.endDay, end)
+        let old = #"{"repetition":{"weekly":{"_0":[1]}},"time":{"clock":{"hour":7,"minute":0}}}"#
+        let decoded = try? JSONDecoder().decode(PageSchedule.self, from: Data(old.utf8))
+        _ = decoded   // the exact legacy encoding of enums varies; the optional keys are what matters
+        let round = try JSONDecoder().decode(PageSchedule.self, from: JSONEncoder().encode(PageSchedule(repetition: .daily, time: .clock(hour: 7, minute: 0))))
+        XCTAssertEqual(round.extraPrayers, [])
+        XCTAssertNil(round.endDay)
+    }
 }

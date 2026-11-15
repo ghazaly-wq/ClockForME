@@ -280,9 +280,23 @@ public struct PageTab: Codable, Equatable, Identifiable, Sendable {
 public struct PageSchedule: Codable, Equatable, Sendable {
     public var repetition: Repetition
     public var time: TimeSpec
+    /// More prayers with the same offset as `time` (same idea as `AlarmRule.extraPrayers`).
+    public var extraPrayers: [Prayer]
+    /// Last day the routine still happens (inclusive); nil = never ends.
+    public var endDay: DayKey?
 
-    public init(repetition: Repetition, time: TimeSpec) {
-        self.repetition = repetition; self.time = time
+    public init(repetition: Repetition, time: TimeSpec, extraPrayers: [Prayer] = [], endDay: DayKey? = nil) {
+        self.repetition = repetition; self.time = time; self.extraPrayers = extraPrayers; self.endDay = endDay
+    }
+
+    private enum CodingKeys: String, CodingKey { case repetition, time, extraPrayers, endDay }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        repetition = try c.decode(Repetition.self, forKey: .repetition)
+        time = try c.decode(TimeSpec.self, forKey: .time)
+        extraPrayers = try c.decodeIfPresent([Prayer].self, forKey: .extraPrayers) ?? []
+        endDay = try c.decodeIfPresent(DayKey.self, forKey: .endDay)
     }
 }
 

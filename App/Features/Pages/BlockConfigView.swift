@@ -125,8 +125,34 @@ struct BlockConfigView: View {
         case .progress:
             Section {
                 TextField("الاسم", text: b.title)
-                sourcePicker(b, title: "يتابع الرقم", candidates: page.allBlocks.filter { $0.kind.isNumeric })
-                numberRow("الهدف (اختياري، وإلا يأخذ هدف الرقم)", value: b.target, decimal: true)
+                numberRow("الهدف (اختياري، وإلا مجموع أهداف العدادات)", value: b.target, decimal: true)
+            } footer: {
+                Text("تقدر تربط الشريط بأكثر من عداد: الشريط يجمع قيمهم.")
+            }
+            Section("العدادات اللي يتابعها") {
+                let candidates = page.allBlocks.filter { $0.kind.isNumeric }
+                if candidates.isEmpty {
+                    Text("أضف عداداً أو رقماً أول.")
+                        .font(.callout)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                ForEach(candidates) { candidate in
+                    Button {
+                        var ids = b.wrappedValue.sourceIDs
+                        if let at = ids.firstIndex(of: candidate.id) { ids.remove(at: at) } else { ids.append(candidate.id) }
+                        b.wrappedValue.sourceIDs = ids
+                    } label: {
+                        HStack {
+                            Text(name(of: candidate)).foregroundStyle(Theme.textPrimary)
+                            Spacer()
+                            if b.wrappedValue.sourceIDs.contains(candidate.id) {
+                                Image(systemName: "checkmark").foregroundStyle(Theme.primaryStrong)
+                            }
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityAddTraits(b.wrappedValue.sourceIDs.contains(candidate.id) ? .isSelected : [])
+                }
             }
         case .chart:
             Section {
