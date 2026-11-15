@@ -129,7 +129,7 @@ final class LiveActivityController {
         return TodayActivityAttributes.ContentState(
             segments: snapshot.segments,
             nextTitle: next?.title,
-            nextTime: next?.time,
+            nextTime: next.flatMap { snapshot.effectiveTime(of: $0, at: Date()) },
             arabicDigits: snapshot.arabicDigits,
             styleID: snapshot.styleID
         )
@@ -138,7 +138,7 @@ final class LiveActivityController {
     /// The activity goes stale when the next timed task is due (its "next task" text is then
     /// out of date until the app runs), or at the end of the day.
     private func staleDate(for snapshot: WidgetSnapshot, now: Date) -> Date {
-        if let time = snapshot.nextItem(at: now)?.time, time > now { return time }
+        if let next = snapshot.nextItem(at: now), let time = snapshot.effectiveTime(of: next, at: now), time > now { return time }
         return max(snapshot.dayEnd, now.addingTimeInterval(60))
     }
 

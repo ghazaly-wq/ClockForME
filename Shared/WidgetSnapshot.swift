@@ -6,8 +6,11 @@ struct WidgetSnapshot: Codable, Equatable {
     struct Item: Codable, Equatable, Identifiable {
         var id: String
         var title: String
+        /// For a task with several times (its alarm follows several prayers) this is the earliest.
         var time: Date?
         var done: Bool
+        /// Every time today when there are several; nil or empty for ordinary tasks (older snapshots too).
+        var times: [Date]? = nil
     }
 
     var generatedAt: Date
@@ -21,6 +24,8 @@ struct WidgetSnapshot: Codable, Equatable {
     var nextAlarmDate: Date?
     var arabicDigits: Bool
     var styleID: String
+    /// Setting: a task with several times is ranked by its next ring, not its first. nil = off (older snapshots).
+    var followsNextRing: Bool? = nil
 
     var total: Int { items.count }
     var completed: Int { items.filter(\.done).count }
@@ -31,13 +36,25 @@ struct WidgetSnapshot: Codable, Equatable {
     /// untimed one, else the most overdue timed one. Done tasks are skipped.
     func nextItem(at date: Date) -> Item? {
         let open = items.filter { !$0.done }
-        if let upcoming = open
-            .filter({ ($0.time ?? .distantPast) >= date && $0.time != nil })
-            .min(by: { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }) {
-            return upcoming
-        }
+        let timed = open.compactMap { item in effectiveTime(of: item, at: date).map { (item: item, time: $0) } }
+        if let upcoming = timed.filter({ $0.time >= date }).min(by: { $0.time < $1.time }) { return upcoming.item }
         if let untimed = open.first(where: { $0.time == nil }) { return untimed }
-        return open.min { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }
+        return timed.min(by: { $0.time < $1.time })?.item
+    }
+
+    /// The time to show and rank a task by at `date`: its first time, or (with the setting on and several
+    /// times) its next ring, else its last one. Mirrors `TodayTaskItem.effectiveTime` in HabitCore.
+    func effectiveTime(of item: Item, at date: Date) -> Date? {
+        guard followsNextRing == true, let times = item.times?.sorted(), times.count > 1 else { return item.time }
+        return times.first(where: { $0 >= date }) ?? times.last
+    }
+
+    /// Every moment the widget should refresh at: each task time, today.
+    var allTimes: [Date] {
+        items.flatMap { item -> [Date] in
+            if let times = item.times, !times.isEmpty { return times }
+            return item.time.map { [$0] } ?? []
+        }
     }
 
     // MARK: - Storage

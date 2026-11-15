@@ -39,6 +39,8 @@ struct TasksView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
+    @AppStorage(SettingsKey.taskShowAllTimes) private var showAllTimes = true
+    @AppStorage(SettingsKey.taskFollowsNextRing) private var followsNextRing = true
     @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
@@ -246,20 +248,14 @@ struct TasksView: View {
         .padding(.vertical, 8)
     }
 
-    /// "7:30 ص" for a clock alarm; for a prayer alarm today's resolved time, or its wording without a location.
+    /// "7:30 ص" for a clock alarm; for a prayer alarm today's resolved time(s), or its wording without a location.
     private func alarmTimeText(_ task: TaskRecord) -> String? {
-        guard let time = task.time else { return nil }
-        if case .prayer = time {
-            let calendar = Calendar.app
-            guard hasLocation else { return AlarmText.summary(of: time, digits: digits) }
-            let provider = AdhanPrayerTimes(latitude: latitude, longitude: longitude)
-            let rule = AlarmRule(title: "", repetition: .daily, time: time)
-            if let fire = NotificationPlanner.fireDate(of: rule, on: DayKey(date: now, calendar: calendar), provider: provider, calendar: calendar) {
-                return AlarmText.time(fire, digits: digits)
-            }
-            return AlarmText.summary(of: time, digits: digits)
-        }
-        return AlarmText.summary(of: time, digits: digits)
+        let calendar = Calendar.app
+        let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
+        return TaskTimeText.text(
+            for: task, on: DayKey(date: now, calendar: calendar), provider: provider, calendar: calendar,
+            now: now, showAll: showAllTimes, followsNextRing: followsNextRing, digits: digits
+        )
     }
 
     // MARK: - Undo

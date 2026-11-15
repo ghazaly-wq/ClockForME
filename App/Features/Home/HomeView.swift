@@ -8,6 +8,8 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
+    @AppStorage(SettingsKey.taskFollowsNextRing) private var followsNextRing = true
+    @AppStorage(SettingsKey.taskShowAllTimes) private var showAllTimes = true
     @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
@@ -116,16 +118,16 @@ struct HomeView: View {
         calendar: Calendar
     ) -> String? {
         let items = mainToday.map {
-            TodayTaskItem(id: $0.id, isDone: doneToday.contains($0.id), time: $0.dueDate(on: today, provider: provider, calendar: calendar))
+            $0.todayItem(done: doneToday.contains($0.id), on: today, provider: provider, calendar: calendar)
         }
-        switch NextMainTask.pick(items, now: now) {
+        switch NextMainTask.pick(items, now: now, followsNextRing: followsNextRing) {
         case .noTasks:
             return nil
         case .allDone:
             return String(localized: "أنجزت كل مهماتك 🎉")
         case .task(let id):
             guard let task = mainToday.first(where: { $0.id == id }) else { return nil }
-            if let due = items.first(where: { $0.id == id })?.time {
+            if let due = items.first(where: { $0.id == id })?.effectiveTime(now: now, followsNextRing: followsNextRing) {
                 return String(localized: "التالية: \(task.title)") + " · " + AlarmText.time(due, digits: digits)
             }
             return String(localized: "التالية: \(task.title)")
@@ -246,8 +248,10 @@ struct HomeView: View {
                         title: task.title,
                         subtitle: RepetitionText.summary(of: task.repetition, digits: digits),
                         isDone: doneToday.contains(task.id),
-                        alarmTime: task.dueDate(on: snapshot.today, provider: provider, calendar: calendar)
-                            .map { AlarmText.time($0, digits: digits) },
+                        alarmTime: TaskTimeText.text(
+                            for: task, on: snapshot.today, provider: provider, calendar: calendar,
+                            now: now, showAll: showAllTimes, followsNextRing: followsNextRing, digits: digits
+                        ),
                         onToggle: { toggle(task, snapshot: snapshot) },
                         onEdit: { taskSheet = .edit(task) }
                     )
@@ -333,7 +337,8 @@ struct HomeView: View {
             tasks: tasks, completions: completions, alarms: alarms,
             extras: ProgressExtras(unlocks: unlocks, purchases: purchases, rewards: rewards, pages: pageRecords, sessions: pageSessions),
             now: now, dayStartHour: dayStartHour, provider: provider,
-            styleID: liveStyle, arabicDigits: digits == .arabicIndic
+            styleID: liveStyle, arabicDigits: digits == .arabicIndic,
+            followsNextRing: followsNextRing
         )
         Task { await live.startManually(output, now: now) }
     }

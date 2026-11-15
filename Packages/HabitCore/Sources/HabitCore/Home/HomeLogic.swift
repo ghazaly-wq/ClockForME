@@ -60,12 +60,23 @@ public struct TodayTaskItem: Equatable, Sendable {
     public let id: UUID
     public let isDone: Bool
     /// When the task is due today (for tasks made from an alarm); nil = no time.
+    /// For a task that follows several prayers this is the earliest one.
     public let time: Date?
+    /// Every time the task is due today, sorted (more than one when its alarm follows several prayers).
+    public let times: [Date]
 
-    public init(id: UUID, isDone: Bool, time: Date?) {
+    public init(id: UUID, isDone: Bool, time: Date?, times: [Date] = []) {
         self.id = id
         self.isDone = isDone
         self.time = time
+        self.times = times.sorted()
+    }
+
+    /// The time to rank this task by. Normally the earliest time. With `followsNextRing` a task with
+    /// several times moves on to its next ring: the first one that hasn't passed, else the last one.
+    public func effectiveTime(now: Date, followsNextRing: Bool) -> Date? {
+        guard followsNextRing, times.count > 1 else { return time }
+        return times.first(where: { $0 >= now }) ?? times.last
     }
 }
 
@@ -79,18 +90,21 @@ public enum NextMainTask {
     /// The next main task to show: the soonest timed task that hasn't passed yet,
     /// else the first task without a time, else the most overdue timed one.
     /// Done tasks are skipped; all done / nothing scheduled have their own results.
-    public static func pick(_ items: [TodayTaskItem], now: Date) -> NextTaskResult {
+    /// `followsNextRing`: a task with several times is ranked by its next ring instead of its first one.
+    public static func pick(_ items: [TodayTaskItem], now: Date, followsNextRing: Bool = false) -> NextTaskResult {
         if items.isEmpty { return .noTasks }
         let open = items.filter { !$0.isDone }
         if open.isEmpty { return .allDone }
 
-        let upcoming = open.filter { ($0.time ?? .distantPast) >= now && $0.time != nil }
+        let ranked = open.map { (item: $0, time: $0.effectiveTime(now: now, followsNextRing: followsNextRing)) }
+
+        let upcoming = ranked.filter { ($0.time ?? .distantPast) >= now && $0.time != nil }
             .min { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }
-        if let upcoming { return .task(upcoming.id) }
+        if let upcoming { return .task(upcoming.item.id) }
 
-        if let untimed = open.first(where: { $0.time == nil }) { return .task(untimed.id) }
+        if let untimed = ranked.first(where: { $0.time == nil }) { return .task(untimed.item.id) }
 
-        let overdue = open.min { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }
-        return overdue.map { .task($0.id) } ?? .allDone
+        let overdue = ranked.min { ($0.time ?? .distantFuture) < ($1.time ?? .distantFuture) }
+        return overdue.map { .task($0.item.id) } ?? .allDone
     }
 }

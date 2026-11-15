@@ -37,7 +37,7 @@ struct TodayProvider: TimelineProvider {
         }
         // One entry per task time, so "next task" stays right without the app running.
         var dates: [Date] = [now]
-        dates += snapshot.items.compactMap(\.time).filter { $0 > now && $0 < snapshot.dayEnd }.sorted()
+        dates += snapshot.allTimes.filter { $0 > now && $0 < snapshot.dayEnd }.sorted()
         dates.append(snapshot.dayEnd)
         let entries = dates.map { TodayEntry(date: $0, snapshot: snapshot) }
         completion(Timeline(entries: entries, policy: .atEnd))
@@ -160,7 +160,7 @@ struct TodayWidgetView: View {
                                 .foregroundStyle(item.done ? Theme.textSecondary : Theme.textPrimary)
                                 .lineLimit(1)
                             Spacer(minLength: 0)
-                            if let time = item.time, !item.done {
+                            if let time = snapshot.effectiveTime(of: item, at: entry.date), !item.done {
                                 Text(SharedFormat.time(time, arabic: snapshot.arabicDigits))
                                     .font(.caption2.monospacedDigit())
                                     .foregroundStyle(Theme.textSecondary)
@@ -205,7 +205,7 @@ struct TodayWidgetView: View {
                 Text("ما عندك مهمات رئيسية اليوم").font(.headline)
             } else if let next = snapshot.nextItem(at: entry.date) {
                 Text(next.title).font(.headline).lineLimit(1)
-                if let time = next.time {
+                if let time = snapshot.effectiveTime(of: next, at: entry.date) {
                     Text(SharedFormat.time(time, arabic: snapshot.arabicDigits)).font(.caption)
                 }
             } else {

@@ -42,6 +42,7 @@ enum AlarmActions {
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, sortOrder: order)
             task.alarmID = alarm.id
             task.time = alarm.time
+            task.extraPrayers = alarm.extraPrayers
             task.routineEnd = alarm.endDay
             context.insert(task)
             try? context.save()
@@ -56,11 +57,13 @@ enum AlarmActions {
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, notes: linked.notes, sortOrder: linked.sortOrder)
             task.alarmID = alarm.id
             task.time = alarm.time
+            task.extraPrayers = alarm.extraPrayers
             task.routineEnd = alarm.endDay
             context.insert(task)
         } else {
             linked.title = alarm.title
             linked.time = alarm.time
+            linked.extraPrayers = alarm.extraPrayers
             linked.routineEnd = alarm.endDay
             linked.kind = .main
             linked.repetition = repetition
@@ -181,15 +184,30 @@ enum AlarmActions {
         try? context.save()
     }
 
-    /// Tasks made from an alarm before tasks had a time get it now.
+    /// Tasks made from an alarm before tasks had a time get it now, and tasks made before alarms could
+    /// follow several prayers pick up the extra prayers of their alarm (or of their page's alarm).
     static func backfillTaskTimes(context: ModelContext) {
         let alarms = (try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []
         let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
         var changed = false
-        for task in tasks where task.endDay == nil && task.timeData == nil {
-            guard let alarmID = task.alarmID, let alarm = alarms.first(where: { $0.id == alarmID }) else { continue }
-            task.time = alarm.time
-            changed = true
+        for task in tasks where task.endDay == nil {
+            let alarm: AlarmRecord?
+            if let alarmID = task.alarmID {
+                alarm = alarms.first { $0.id == alarmID }
+            } else if let pageID = task.pageID {
+                alarm = alarms.first { $0.linkedPageID == pageID }
+            } else {
+                alarm = nil
+            }
+            guard let alarm else { continue }
+            if task.timeData == nil {
+                task.time = alarm.time
+                changed = true
+            }
+            if task.extraPrayers != alarm.extraPrayers && task.time == alarm.time {
+                task.extraPrayers = alarm.extraPrayers
+                changed = true
+            }
         }
         if changed { try? context.save() }
     }

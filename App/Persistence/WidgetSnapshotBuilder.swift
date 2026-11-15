@@ -18,7 +18,8 @@ enum WidgetSnapshotBuilder {
         provider: PrayerTimeProviding?,
         calendar: Calendar = .app,
         styleID: String,
-        arabicDigits: Bool
+        arabicDigits: Bool,
+        followsNextRing: Bool
     ) -> Output {
         let progress = ProgressSnapshot.make(
             tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour,
@@ -31,12 +32,14 @@ enum WidgetSnapshotBuilder {
             .filter { $0.kind == .main && $0.repetition != nil && $0.spec.isScheduled(on: today, calendar: calendar) }
             .sorted { ($0.sortOrder, $0.createdAt) < ($1.sortOrder, $1.createdAt) }
 
-        let items = mainToday.map {
-            WidgetSnapshot.Item(
-                id: $0.id.uuidString,
-                title: $0.title,
-                time: $0.dueDate(on: today, provider: provider, calendar: calendar),
-                done: doneToday.contains($0.id)
+        let items = mainToday.map { task -> WidgetSnapshot.Item in
+            let dates = task.dueDates(on: today, provider: provider, calendar: calendar)
+            return WidgetSnapshot.Item(
+                id: task.id.uuidString,
+                title: task.title,
+                time: dates.first,
+                done: doneToday.contains(task.id),
+                times: dates.count > 1 ? dates : nil
             )
         }
 
@@ -66,7 +69,8 @@ enum WidgetSnapshotBuilder {
             nextAlarmTitle: nextAlarm?.title,
             nextAlarmDate: nextAlarm?.date,
             arabicDigits: arabicDigits,
-            styleID: styleID
+            styleID: styleID,
+            followsNextRing: followsNextRing
         )
         return Output(snapshot: snapshot, dayKey: today)
     }

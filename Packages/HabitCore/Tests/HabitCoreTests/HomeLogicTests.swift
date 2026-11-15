@@ -83,4 +83,41 @@ final class HomeLogicTests: XCTestCase {
         let a = item(false, at(10, 12, 0)), b = item(false, nil)
         XCTAssertEqual(NextMainTask.pick([b, a], now: at(10, 12, 0)), .task(a.id))
     }
+
+    // MARK: - Tasks with several times (alarm follows several prayers)
+
+    func testEffectiveTimeDefaultsToFirst() {
+        let t = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 12, 0), times: [at(10, 19, 0), at(10, 12, 0), at(10, 15, 0)])
+        XCTAssertEqual(t.times, [at(10, 12, 0), at(10, 15, 0), at(10, 19, 0)])
+        XCTAssertEqual(t.effectiveTime(now: at(10, 16, 0), followsNextRing: false), at(10, 12, 0))
+    }
+
+    func testEffectiveTimeFollowsNextRing() {
+        let t = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 12, 0), times: [at(10, 12, 0), at(10, 15, 0), at(10, 19, 0)])
+        XCTAssertEqual(t.effectiveTime(now: at(10, 11, 0), followsNextRing: true), at(10, 12, 0))
+        XCTAssertEqual(t.effectiveTime(now: at(10, 13, 0), followsNextRing: true), at(10, 15, 0))
+        XCTAssertEqual(t.effectiveTime(now: at(10, 15, 0), followsNextRing: true), at(10, 15, 0))
+        XCTAssertEqual(t.effectiveTime(now: at(10, 20, 0), followsNextRing: true), at(10, 19, 0))
+    }
+
+    func testSingleTimeIgnoresFollowSetting() {
+        let t = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 12, 0), times: [at(10, 12, 0)])
+        XCTAssertEqual(t.effectiveTime(now: at(10, 13, 0), followsNextRing: true), at(10, 12, 0))
+    }
+
+    func testPickFollowsNextRingOfMultiTimeTask() {
+        let multi = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 12, 0), times: [at(10, 12, 0), at(10, 15, 0), at(10, 19, 0)])
+        let other = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 17, 0), times: [at(10, 17, 0)])
+        let now = at(10, 13, 0)
+        // Off: the multi task counts as passed (12:00), so the 17:00 task is next.
+        XCTAssertEqual(NextMainTask.pick([multi, other], now: now), .task(other.id))
+        // On: its 15:00 ring is still ahead and beats 17:00.
+        XCTAssertEqual(NextMainTask.pick([multi, other], now: now, followsNextRing: true), .task(multi.id))
+    }
+
+    func testPickFollowOnStillOverdueAfterLastRing() {
+        let multi = TodayTaskItem(id: UUID(), isDone: false, time: at(10, 12, 0), times: [at(10, 12, 0), at(10, 15, 0)])
+        let untimed = TodayTaskItem(id: UUID(), isDone: false, time: nil)
+        XCTAssertEqual(NextMainTask.pick([multi, untimed], now: at(10, 20, 0), followsNextRing: true), .task(untimed.id))
+    }
 }

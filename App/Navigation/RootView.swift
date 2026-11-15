@@ -18,6 +18,7 @@ struct RootView: View {
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
+    @AppStorage(SettingsKey.taskFollowsNextRing) private var followsNextRing = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageWidth: CGFloat = 393
     @State private var dragX: CGFloat = 0
@@ -41,6 +42,7 @@ struct RootView: View {
             hasher.combine(task.startDayISO)
             hasher.combine(task.endDayISO)
             hasher.combine(task.timeData)
+            hasher.combine(task.extraPrayersData)
             hasher.combine(task.sortOrder)
         }
         for completion in completions {
@@ -56,6 +58,7 @@ struct RootView: View {
         hasher.combine(hasLocation)
         hasher.combine(latitude)
         hasher.combine(longitude)
+        hasher.combine(followsNextRing)
         hasher.combine(refreshTick)
         return hasher.finalize()
     }
@@ -66,7 +69,8 @@ struct RootView: View {
             tasks: tasks, completions: completions, alarms: alarms,
             extras: ProgressExtras.load(context: context),
             now: now, dayStartHour: dayStartHour, provider: provider,
-            styleID: liveStyle, arabicDigits: DigitStyle(storedValue: digitRaw) == .arabicIndic
+            styleID: liveStyle, arabicDigits: DigitStyle(storedValue: digitRaw) == .arabicIndic,
+            followsNextRing: followsNextRing
         )
     }
 

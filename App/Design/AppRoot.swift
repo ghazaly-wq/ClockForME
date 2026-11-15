@@ -22,6 +22,10 @@ enum SettingsKey {
     static let morningMinute = "morningReminderMinute"
     /// File name of the imported alarm sound in Library/Sounds; empty = system default.
     static let alarmSound = "alarmSoundName"
+    /// Multi-prayer tasks: list every time in the task row (default on).
+    static let taskShowAllTimes = "taskShowAllTimes"
+    /// Multi-prayer tasks: the "next task" follows the task's next ring, not its first (default on).
+    static let taskFollowsNextRing = "taskFollowsNextRing"
 }
 
 extension AppearanceMode {

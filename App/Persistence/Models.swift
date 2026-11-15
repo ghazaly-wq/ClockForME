@@ -27,6 +27,8 @@ final class TaskRecord {
     /// Last day of a routine that ends (inclusive), copied from the alarm it came from. Unlike `endDay` this is
     /// not "stopped by the owner", so the task still counts as the alarm's active task.
     var routineEndISO: String? = nil
+    /// More prayers the task's alarm follows with the same offset as `time` (copied from the alarm or page).
+    var extraPrayersData: Data? = nil
 
     init(
         id: UUID = UUID(),
@@ -89,6 +91,14 @@ extension TaskRecord {
             return DayKey(isoString: iso)
         }
         set { endDayISO = newValue?.isoString }
+    }
+
+    var extraPrayers: [Prayer] {
+        get {
+            guard let data = extraPrayersData else { return [] }
+            return (try? JSONDecoder().decode([Prayer].self, from: data)) ?? []
+        }
+        set { extraPrayersData = newValue.isEmpty ? nil : (try? JSONEncoder().encode(newValue)) }
     }
 
     var routineEnd: DayKey? {
