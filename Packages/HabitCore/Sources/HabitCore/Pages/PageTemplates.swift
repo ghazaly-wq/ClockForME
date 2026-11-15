@@ -67,9 +67,18 @@ public enum PageTemplates {
         return PageDefinition(
             name: "تمارين", emoji: "🏋️", accent: "green",
             tabs: [
-                tab("Full Body A", ["سكوات", "ضغط بنش", "سحب"]),
-                tab("Full Body B", ["ديدلفت", "ضغط كتف", "تجديف"]),
-                tab("Full Body C", ["ضغط مائل", "رجل أمامي", "عقلة"])
+                tab("Full Body A", [
+                    "Machine Shoulder Press", "Lat Pulldown", "Wide Grip Row Machine", "Chest Fly Machine",
+                    "Leg Extension", "Leg Press", "Crunch Machine"
+                ]),
+                tab("Full Body B", [
+                    "Triceps Extension", "Machine Preacher Curl", "Machine Shoulder Press", "Crunch Machine",
+                    "Leg Extension", "Seated Leg Curl", "Leg Press"
+                ]),
+                tab("Full Body C", [
+                    "Lat Pulldown", "Chest Fly Machine", "Wide Grip Row Machine", "Triceps Extension",
+                    "Machine Preacher Curl", "Seated Leg Curl", "Leg Press"
+                ])
             ],
             rotatesTabs: true
         )
