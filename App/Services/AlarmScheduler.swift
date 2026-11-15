@@ -5,25 +5,25 @@ import Foundation
 import HabitCore
 import SwiftUI
 
-/// Runs when the stop button of a main-task alarm is pressed: marks today's linked task done.
-struct CompleteLinkedTaskIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "إكمال المهمة"
+/// Runs when the stop button is pressed: stops the alarm and opens the app
+/// (on the Tasks page for main-task alarms, otherwise on the Alarms page).
+struct OpenHabitsIntent: LiveActivityIntent {
+    static var title: LocalizedStringResource = "فتح التطبيق"
+    static var openAppWhenRun: Bool = true
 
-    @Parameter(title: "alarmID")
-    var alarmID: String
+    @Parameter(title: "tasks")
+    var showTasks: Bool
 
     init() {}
 
-    init(alarmID: String) {
-        self.alarmID = alarmID
+    init(showTasks: Bool) {
+        self.showTasks = showTasks
     }
 
     func perform() async throws -> some IntentResult {
-        let id = UUID(uuidString: alarmID)
+        let tasks = showTasks
         await MainActor.run {
-            if let id {
-                AlarmActions.completeLinkedTask(alarmID: id, container: AppEnvironment.shared.container)
-            }
+            AppEnvironment.shared.router.selectedTab = tasks ? .tasks : .alarms
         }
         return .result()
     }
@@ -117,7 +117,7 @@ enum AlarmScheduler {
             countdownDuration: Alarm.CountdownDuration(preAlert: nil, postAlert: snoozeSeconds),
             schedule: .fixed(fireDate),
             attributes: attributes,
-            stopIntent: rule.isMainTask ? CompleteLinkedTaskIntent(alarmID: rule.id.uuidString) : nil,
+            stopIntent: OpenHabitsIntent(showTasks: rule.isMainTask),
             secondaryIntent: nil,
             sound: .default
         )
