@@ -116,20 +116,39 @@ enum AlarmActions {
         try? context.save()
     }
 
+    // MARK: - Finished one-time alarms
+
+    /// A one-time alarm switches itself off after it has rung (it stays in the list, like the Clock app).
+    static func expireFinished(context: ModelContext, now: Date = Date()) {
+        let calendar = Calendar.app
+        let alarms = (try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []
+        let provider = PrayerLocation.load()?.provider
+        var changed = false
+        for alarm in alarms where alarm.isEnabled {
+            guard case .once(let day) = alarm.repetition,
+                  let fire = NotificationPlanner.fireDate(of: alarm.rule, on: day, provider: provider, calendar: calendar),
+                  fire <= now else { continue }
+            alarm.isEnabled = false
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
     // MARK: - Re-planning
 
     /// After any alarm is saved or switched on: ask for notification permission the first
     /// time (never earlier), then refresh the pending notifications.
     static func requestAndReplan() async {
-        await NotificationService.requestAuthorizationIfNeeded()
+        await AlarmScheduler.requestAuthorizationIfNeeded()
         await replan(container: AppEnvironment.shared.container)
     }
 
     /// Reads alarms and the prayer location from storage and refreshes the pending notifications.
     static func replan(container: ModelContainer) async {
         let context = ModelContext(container)
+        expireFinished(context: context)
         let alarms = ((try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []).map(\.rule)
         let location = PrayerLocation.load()
-        await NotificationService.replan(alarms: alarms, location: location)
+        await AlarmScheduler.replan(alarms: alarms, location: location)
     }
 }

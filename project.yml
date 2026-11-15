@@ -35,6 +35,7 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true
+        NSAlarmKitUsageDescription: نجدول المنبهات اللي تضيفها عشان ترن في وقتها حتى لو الجوال صامت
         NSLocationWhenInUseUsageDescription: نستخدم موقعك مرة واحدة لحساب أوقات الصلاة
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.ghazaly.habits.refresh]

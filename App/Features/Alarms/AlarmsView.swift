@@ -2,7 +2,7 @@ import HabitCore
 import SwiftData
 import SwiftUI
 import UIKit
-import UserNotifications
+import AlarmKit
 
 struct AlarmsView: View {
     @Environment(\.modelContext) private var context
@@ -16,7 +16,7 @@ struct AlarmsView: View {
 
     @State private var now = Date()
     @State private var editor: AlarmEditorTarget?
-    @State private var authStatus: UNAuthorizationStatus?
+    @State private var authStatus: AlarmManager.AuthorizationState?
     @State private var undoToken: DeletedAlarmSnapshot?
     @State private var undoDismiss: Task<Void, Never>?
 
@@ -40,7 +40,7 @@ struct AlarmsView: View {
             List {
                 if authStatus == .denied {
                     banner(
-                        text: "الإشعارات متوقفة، فما راح ترن تنبيهاتك.",
+                        text: "إذن المنبهات متوقف، فما راح ترن تنبيهاتك.",
                         button: "فتح إعدادات الجهاز"
                     ) {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -85,10 +85,14 @@ struct AlarmsView: View {
             AlarmEditorView(target: target)
                 .appRoot()
         }
-        .task(id: scenePhase) { authStatus = await NotificationService.authorizationStatus() }
+        .task(id: scenePhase) {
+            authStatus = AlarmScheduler.authorizationState
+            AlarmActions.expireFinished(context: context)
+        }
         .onReceive(ticker) { date in
             now = date
-            Task { authStatus = await NotificationService.authorizationStatus() }
+            authStatus = AlarmScheduler.authorizationState
+            AlarmActions.expireFinished(context: context, now: date)
         }
     }
 
@@ -138,6 +142,11 @@ struct AlarmsView: View {
                     Text(detail)
                         .font(.caption)
                         .foregroundStyle(Theme.textSecondary)
+                    if alarm.time.isPrayerBased, alarm.isEnabled, let next = nextRing(of: alarm) {
+                        Text(String(localized: "الرنة القادمة: ") + nextRingText(next))
+                            .font(.caption)
+                            .foregroundStyle(Theme.primaryStrong)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -222,6 +231,20 @@ struct AlarmsView: View {
 
     private func todayFire(of alarm: AlarmRecord, today: DayKey, calendar: Calendar) -> Date? {
         NotificationPlanner.fireDate(of: alarm.rule, on: today, provider: provider, calendar: calendar)
+    }
+
+    /// The next moment this alarm will ring (prayer alarms move a little every day).
+    private func nextRing(of alarm: AlarmRecord) -> Date? {
+        NotificationPlanner.plan(alarms: [alarm.rule], from: now, limit: 1, provider: provider, calendar: Calendar.app).first?.fireDate
+    }
+
+    private func nextRingText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ar_SA")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = Calendar.app.timeZone
+        formatter.dateFormat = "EEEE h:mm a"
+        return digits.format(formatter.string(from: date))
     }
 
     private func sortKey(_ date: Date?, _ calendar: Calendar) -> Int {
