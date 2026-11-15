@@ -95,6 +95,7 @@ struct RootView: View {
                 ForEach(AppTab.allCases) { tab in
                     let isCurrent = tab == router.selectedTab
                     page(for: tab)
+                        .environment(\.layoutDirection, .rightToLeft)
                         .background(Theme.surface)
                         .offset(x: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX)
                         .opacity(reduceMotion && !isCurrent ? 0 : 1)
@@ -102,6 +103,8 @@ struct RootView: View {
                         .accessibilityHidden(!isCurrent)
                 }
             }
+            // Left-to-right container: offsets and drags are in plain screen coordinates (no RTL mirroring).
+            .environment(\.layoutDirection, .leftToRight)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { pageWidth = max($0, 1) }
             .animation(reduceMotion ? .easeInOut(duration: 0.15) : .smooth(duration: 0.38), value: router.selectedTab)
             .overlay(alignment: .leading) { edgeSwipeStrip }
@@ -170,16 +173,15 @@ struct RootView: View {
             .gesture(
                 DragGesture(minimumDistance: 10)
                     .onChanged { value in
-                        // The forced RTL environment flips the gesture's x axis, so mirror it back (finger right = positive).
-                        let dx = -value.translation.width
+                                                let dx = value.translation.width
                         guard abs(dx) > abs(value.translation.height) else { return }
                         // Finger moving left shows the tab to the right of this one, and vice versa.
                         let hasNext = router.selectedTab.neighbor(dx < 0 ? -1 : 1) != nil
                         dragX = hasNext ? dx : dx * 0.25   // rubber band at the ends
                     }
                     .onEnded { value in
-                        let dx = -value.translation.width
-                        let predicted = -value.predictedEndTranslation.width
+                        let dx = value.translation.width
+                        let predicted = value.predictedEndTranslation.width
                         let horizontal = abs(dx) > abs(value.translation.height)
                         let next = router.selectedTab.neighbor(dx < 0 ? -1 : 1)
                         let commit = horizontal && next != nil

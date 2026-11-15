@@ -6,6 +6,7 @@ struct CurvedTabBar: View {
     @Binding var selection: AppTab
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var gooRunning = false
+    @State private var gooToken = 0
 
     // Right-to-left layout: the first item of an HStack sits on the right.
     private let rightTabs: [AppTab] = [.tasks, .alarms]
@@ -23,6 +24,7 @@ struct CurvedTabBar: View {
                 let slot = (w - Metrics.homeRingDiameter) / 4
                 ZStack(alignment: .topLeading) {
                     GooBlob(selection: selection, width: w, running: gooRunning, reduceMotion: reduceMotion)
+                        .overlay { sectionDividers(width: w, slot: slot) }
                         .clipShape(BottomBarArcShape())
                         .allowsHitTesting(false)
                     arcTab(.tasks, x: w - slot * 0.5, width: w)
@@ -39,14 +41,32 @@ struct CurvedTabBar: View {
         .frame(height: Metrics.barHeight)
         // Keep the bar usable at accessibility text sizes.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        // Plain screen coordinates for the arc layout, so tab positions, blob and pager all agree.
+        .environment(\.layoutDirection, .leftToRight)
         .sensoryFeedback(.selection, trigger: selection)
         .onChange(of: selection) {
+            gooToken += 1
+            let token = gooToken
             gooRunning = true
             Task { @MainActor in
-                try? await Task.sleep(for: .seconds(1.6))
-                gooRunning = false
+                try? await Task.sleep(for: .seconds(1.5))
+                if token == gooToken { gooRunning = false }   // only the latest change may stop the animation
             }
         }
+    }
+
+    /// Thin lines between the bar's sections (like the owner's reference).
+    private func sectionDividers(width: CGFloat, slot: CGFloat) -> some View {
+        let side = slot * 2
+        return Canvas { ctx, size in
+            for x in [slot, side, width - side, width - slot] {
+                var line = Path()
+                line.move(to: CGPoint(x: x, y: Metrics.barRise + 6))
+                line.addLine(to: CGPoint(x: x, y: size.height + 40))
+                ctx.stroke(line, with: .color(.white.opacity(0.14)), lineWidth: 1)
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     /// Places a tab at `x`, on the same quadratic arc as `BottomBarArcShape`:
@@ -124,8 +144,8 @@ private final class GooSim {
         }
         let dt = min(max(now.timeIntervalSince(last ?? now), 0), 1.0 / 30.0)
         last = now
-        integrate(&lead, target: target, k: 280, c: 13, dt: dt)
-        integrate(&tail, target: target, k: 85, c: 15, dt: dt)
+        integrate(&lead, target: target, k: 300, c: 15, dt: dt)
+        integrate(&tail, target: target, k: 170, c: 19, dt: dt)
     }
 
     private func integrate(_ b: inout Body, target: SIMD3<Double>, k: Double, c: Double, dt: Double) {
@@ -148,32 +168,36 @@ private struct GooBlob: View {
         let rise = Double(Metrics.barRise)
         func onArc(_ x: Double) -> SIMD3<Double> {
             let u = x / w
-            return SIMD3(x, rise * pow(1 - 2 * u, 2) + 35, 30)
+            _ = u; _ = rise
+            return SIMD3(x, 0, slot / 2 - 3)
         }
         switch selection {
         case .tasks: return onArc(w - slot * 0.5)
         case .alarms: return onArc(w - slot * 1.5)
         case .achievements: return onArc(slot * 1.5)
         case .pages: return onArc(slot * 0.5)
-        case .home: return SIMD3(w / 2, 14, 46)   // pooled under the Home button
+        case .home: return SIMD3(w / 2, 0, Double(Metrics.homeRingDiameter) / 2 - 2)   // the section under Home
         }
     }
 
     var body: some View {
         TimelineView(.animation(paused: !running && sim.ready)) { timeline in
             Canvas { ctx, size in
-                sim.step(now: timeline.date, target: target(), snap: reduceMotion)
+                sim.step(now: timeline.date, target: target(), snap: reduceMotion || !running)
                 ctx.addFilter(.alphaThreshold(min: 0.5, color: Theme.primary))
-                ctx.addFilter(.blur(radius: 9))
+                ctx.addFilter(.blur(radius: 7))
                 ctx.drawLayer { layer in
-                    for b in [sim.lead, sim.tail] {
-                        let r = max(b.p.z, 4)
-                        layer.fill(Path(ellipseIn: CGRect(x: b.p.x - r, y: b.p.y - r, width: r * 2, height: r * 2)),
-                                   with: .color(.white))
-                        // Pillar down to the bottom edge, so the green fills the bar like in the sketch.
-                        layer.fill(Path(CGRect(x: b.p.x - r * 0.8, y: b.p.y, width: r * 1.6, height: size.height + 40)),
+                    // A whole bar section lit up: the lead and tail sections plus a band between them,
+                    // so a long jump stretches like one liquid instead of splitting into two.
+                    let l = sim.lead, t = sim.tail
+                    let hw = max(l.p.z, 4), hwT = max(t.p.z, 4)
+                    func section(_ x0: Double, _ x1: Double) {
+                        layer.fill(Path(CGRect(x: x0, y: -40, width: x1 - x0, height: size.height + 80)),
                                    with: .color(.white))
                     }
+                    section(l.p.x - hw, l.p.x + hw)
+                    section(t.p.x - hwT, t.p.x + hwT)
+                    section(min(l.p.x - hw, t.p.x - hwT), max(l.p.x + hw, t.p.x + hwT))
                 }
             }
         }
