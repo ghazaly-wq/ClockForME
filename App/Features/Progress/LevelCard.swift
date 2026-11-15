@@ -59,6 +59,8 @@ struct TodayCard: View {
     let progress: DayProgress
     let segments: [Bool]
     let streak: Int
+    /// "التالية: …" — the next main task by time, or the all-done message.
+    var nextLine: String? = nil
     @Environment(\.digitStyle) private var digits
 
     private var progressText: String {
@@ -90,6 +92,11 @@ struct TodayCard: View {
                 .accessibilityLabel(Text(digits.format(String(localized: "الستريك \(streak) أيام متتالية"))))
             }
             SegmentedProgressBar(segments: segments)
+            if let nextLine {
+                Text(nextLine)
+                    .font(.subheadline.bold())
+                    .foregroundStyle(Theme.primaryStrong)
+            }
         }
         .padding(16)
         .background(Theme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
