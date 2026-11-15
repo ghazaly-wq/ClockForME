@@ -1,7 +1,20 @@
+import SwiftData
 import SwiftUI
 
 struct RootView: View {
     @Environment(AppRouter.self) private var router
+    @Environment(\.scenePhase) private var scenePhase
+    @Query private var alarms: [AlarmRecord]
+    @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
+    @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
+    @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
+    @State private var refreshTick = 0
+
+    /// Anything that should make the notification plan be rebuilt.
+    private var replanKey: String {
+        let alarmPart = alarms.map(\.fingerprint).sorted().joined(separator: ";")
+        return "\(alarmPart)#\(hasLocation)#\(latitude)#\(longitude)#\(refreshTick)"
+    }
 
     var body: some View {
         @Bindable var router = router
@@ -25,6 +38,21 @@ struct RootView: View {
         }
         .sheet(isPresented: $router.showSettings) {
             SettingsView()
+        }
+        // Rolling notification window: rebuilt on launch, return to the app,
+        // a new day, and any change to alarms or the prayer location.
+        .task(id: replanKey) {
+            await AlarmActions.replan(container: AppEnvironment.shared.container)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                refreshTick += 1
+            } else if phase == .background {
+                AppDelegate.scheduleBackgroundRefresh()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            refreshTick += 1
         }
     }
 

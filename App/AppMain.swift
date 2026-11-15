@@ -3,14 +3,15 @@ import SwiftUI
 
 @main
 struct HabitsApp: App {
-    @State private var router = AppRouter()
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    private let environment = AppEnvironment.shared
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(router)
+                .environment(environment.router)
                 .appRoot()
         }
-        .modelContainer(for: [TaskRecord.self, CompletionRecord.self])
+        .modelContainer(environment.container)
     }
 }

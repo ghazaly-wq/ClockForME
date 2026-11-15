@@ -6,6 +6,10 @@ enum SettingsKey {
     static let appearance = "appearanceMode"
     static let digitStyle = "digitStyle"
     static let dayStartHour = "dayStartHour"
+    static let hasPrayerLocation = "prayerHasLocation"
+    static let prayerLatitude = "prayerLatitude"
+    static let prayerLongitude = "prayerLongitude"
+    static let prayerPlaceName = "prayerPlaceName"
 }
 
 extension AppearanceMode {

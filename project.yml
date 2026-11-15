@@ -36,6 +36,8 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         NSSupportsLiveActivities: true
         NSLocationWhenInUseUsageDescription: نستخدم موقعك مرة واحدة لحساب أوقات الصلاة
+        UIBackgroundModes: [fetch]
+        BGTaskSchedulerPermittedIdentifiers: [com.ghazaly.habits.refresh]
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
         CFBundleURLTypes:

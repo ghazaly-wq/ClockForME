@@ -41,6 +41,13 @@ struct SettingsView: View {
                     Text(digits.format(String(localized: "الساعة اللي يبدأ فيها يومك الجديد. مثلاً لو اخترت 03:00، المهمات اللي تنجزها بعد منتصف الليل تحسب لليوم السابق.")))
                 }
 
+                Section {
+                    NavigationLink("الصلاة والموقع") { PrayerSettingsView() }
+                    TodayPrayersRows()
+                } header: {
+                    Text("أوقات الصلاة اليوم")
+                }
+
                 Section("المهمات والستريك") {
                     Text(digits.format(String(localized: "إذا أنجزت كل مهماتك الرئيسية في اليوم، يزيد الستريك. وإذا أنجزت جزءاً منها، يثبت. وإذا ما أنجزت شيئاً، تبدأ عدّ 3 أيام، وبعدها ينقص الستريك واحد كل يوم.")))
                         .font(.callout)

@@ -18,6 +18,8 @@ final class TaskRecord {
     var createdAt: Date
     /// Position in lists (lower first). Default keeps existing data migratable.
     var sortOrder: Int = 0
+    /// The alarm this task was created from ("main-task alarm"), if any.
+    var alarmID: UUID? = nil
 
     init(
         id: UUID = UUID(),
