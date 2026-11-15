@@ -48,6 +48,8 @@ struct HomeView: View {
             subtitle: headerSubtitle(provider: provider, calendar: calendar)
         ) {
             VStack(spacing: 16) {
+                CalendarStrip(tasks: tasks, completions: completions, today: snapshot.today)
+
                 TodayCard(
                     progress: snapshot.todayMain,
                     segments: mainToday.map { doneToday.contains($0.id) },
