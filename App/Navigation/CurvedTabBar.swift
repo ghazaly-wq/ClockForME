@@ -4,6 +4,7 @@ import SwiftUI
 /// Tabs navigate (never act), have Arabic labels, and give selection haptics.
 struct CurvedTabBar: View {
     @Binding var selection: AppTab
+    @Namespace private var glassNS
 
     // Right-to-left layout: the first item of an HStack sits on the right.
     private let rightTabs: [AppTab] = [.tasks, .alarms]
@@ -15,11 +16,12 @@ struct CurvedTabBar: View {
                 .fill(Theme.barMuted)
                 .ignoresSafeArea(edges: .bottom)
 
-            GlassEffectContainer(spacing: 8) {
+            // One glass track per side, and a single glass "lens" that slides (morphs) to the selected tab.
+            GlassEffectContainer(spacing: 12) {
                 HStack(spacing: 0) {
-                    ForEach(rightTabs) { tabButton($0) }
+                    trackGroup(rightTabs)
                     Color.clear.frame(width: Metrics.homeRingDiameter)
-                    ForEach(leftTabs) { tabButton($0) }
+                    trackGroup(leftTabs)
                 }
             }
             .frame(height: Metrics.tabRowHeight)
@@ -34,10 +36,16 @@ struct CurvedTabBar: View {
         .sensoryFeedback(.selection, trigger: selection)
     }
 
+    private func trackGroup(_ tabs: [AppTab]) -> some View {
+        HStack(spacing: 0) { ForEach(tabs) { tabButton($0) } }
+            .padding(3)
+            .glassEffect(.regular, in: Capsule())
+    }
+
     private func tabButton(_ tab: AppTab) -> some View {
         let isSelected = selection == tab
         return Button {
-            selection = tab
+            withAnimation(.smooth(duration: 0.4)) { selection = tab }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: isSelected ? tab.selectedSymbol : tab.symbol)
@@ -47,12 +55,13 @@ struct CurvedTabBar: View {
             }
             .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.85))
             .frame(maxWidth: .infinity, minHeight: 44)
-            // Liquid Glass on every tab; the selected one is tinted with the accent, like the Home button.
-            .glassEffect(
-                isSelected ? .regular.tint(Theme.primary.opacity(0.9)).interactive() : .regular.interactive(),
-                in: Capsule()
-            )
-            .padding(.horizontal, 3)
+            .background {
+                if isSelected {
+                    Color.clear
+                        .glassEffect(.regular.tint(Theme.primary.opacity(0.85)).interactive(), in: Capsule())
+                        .glassEffectID("lens", in: glassNS)
+                }
+            }
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)

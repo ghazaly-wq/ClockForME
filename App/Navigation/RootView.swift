@@ -96,7 +96,7 @@ struct RootView: View {
                     let isCurrent = tab == router.selectedTab
                     page(for: tab)
                         .background(Theme.surface)
-                        .offset(x: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX)
+                        .transformEffect(.init(translationX: reduceMotion ? 0 : CGFloat(router.selectedTab.order - tab.order) * pageWidth + dragX, y: 0))
                         .opacity(reduceMotion && !isCurrent ? 0 : 1)
                         .allowsHitTesting(isCurrent)
                         .accessibilityHidden(!isCurrent)
