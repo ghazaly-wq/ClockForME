@@ -20,13 +20,17 @@ struct TasksView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
-    @Query(sort: \TaskRecord.createdAt) private var tasks: [TaskRecord]
+    @Query(sort: [SortDescriptor(\TaskRecord.sortOrder), SortDescriptor(\TaskRecord.createdAt)])
+    private var tasks: [TaskRecord]
     @Query private var completions: [CompletionRecord]
 
     @State private var segment: TaskKind = .main
     @State private var now = Date()
     @State private var editor: EditorTarget?
     @State private var upcomingExpanded = false
+    @State private var editMode: EditMode = .inactive
+    @State private var undoToken: DeleteUndo?
+    @State private var undoDismiss: Task<Void, Never>?
 
     private let ticker = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
@@ -76,9 +80,24 @@ struct TasksView: View {
                         ForEach(list) { task in
                             row(task, isDone: doneToday.contains(task.id), snapshot: snapshot)
                         }
+                        .onMove { source, destination in
+                            TaskActions.move(displayed: list, from: source, to: destination, allTasks: tasks, context: context)
+                        }
                     }
                 } header: {
-                    Text(segment == .main ? "مهمات اليوم الرئيسية" : "مهمات اليوم الفرعية")
+                    HStack {
+                        Text(segment == .main ? "مهمات اليوم الرئيسية" : "مهمات اليوم الفرعية")
+                        Spacer()
+                        if list.count > 1 {
+                            Button(editMode.isEditing ? "تم" : "ترتيب") {
+                                withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                            }
+                            .font(.subheadline.bold())
+                            .foregroundStyle(Theme.primaryStrong)
+                            .textCase(nil)
+                            .frame(minHeight: 44)
+                        }
+                    }
                 }
                 .listRowBackground(Theme.card)
 
@@ -110,7 +129,14 @@ struct TasksView: View {
             .listStyle(.insetGrouped)
             .scrollContentBackground(.hidden)
             .contentMargins(.bottom, Metrics.homeRingDiameter / 2 + 8, for: .scrollContent)
+            .environment(\.editMode, $editMode)
         }
+        .overlay(alignment: .bottom) {
+            if let undoToken {
+                undoToast(undoToken)
+            }
+        }
+        .animation(.spring(duration: 0.3), value: undoToken != nil)
         .sheet(item: $editor) { target in
             TaskEditorView(target: target)
                 .appRoot()
@@ -142,7 +168,7 @@ struct TasksView: View {
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                TaskActions.delete(task, completions: completions, context: context, today: snapshot.today)
+                showUndo(TaskActions.delete(task, completions: completions, context: context, today: snapshot.today))
             } label: {
                 Label("حذف", systemImage: "trash")
             }
@@ -167,6 +193,39 @@ struct TasksView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
+    }
+
+    // MARK: - Undo
+
+    private func undoToast(_ token: DeleteUndo) -> some View {
+        HStack(spacing: 12) {
+            Text("تم حذف المهمة")
+                .font(.subheadline.bold())
+                .foregroundStyle(Theme.textPrimary)
+            Button("تراجع") {
+                TaskActions.undoDelete(token, context: context)
+                undoDismiss?.cancel()
+                undoToken = nil
+            }
+            .font(.subheadline.bold())
+            .foregroundStyle(Theme.primaryStrong)
+            .frame(minHeight: 44)
+        }
+        .padding(.horizontal, 18)
+        .background(Theme.card, in: Capsule())
+        .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
+        .padding(.bottom, 56)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    private func showUndo(_ token: DeleteUndo) {
+        undoToken = token
+        AccessibilityNotification.Announcement(String(localized: "تم حذف المهمة")).post()
+        undoDismiss?.cancel()
+        undoDismiss = Task { @MainActor in
+            try? await Task.sleep(for: .seconds(5))
+            if !Task.isCancelled { undoToken = nil }
+        }
     }
 
     // MARK: - Data

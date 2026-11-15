@@ -10,6 +10,7 @@ struct TaskEditorView: View {
     @Environment(\.digitStyle) private var digits
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
     @Query private var completions: [CompletionRecord]
+    @Query private var allTasks: [TaskRecord]
 
     enum ScheduleType: Hashable {
         case once, weekly, monthly, anytime
@@ -191,17 +192,18 @@ struct TaskEditorView: View {
 
         var start = today
         if case .once(let day)? = repetition { start = day }
+        let nextOrder = (allTasks.map(\.sortOrder).max() ?? -1) + 1
 
         switch target {
         case .new:
-            context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes))
+            context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: nextOrder))
         case .edit(let task):
             let hasHistory = completions.contains { $0.taskID == task.id }
             let scheduleChanged = task.kind != kind || task.repetition != repetition
             if hasHistory && scheduleChanged {
                 // Keep past days exactly as they were: stop the old task today and start a new one.
                 task.endDay = today
-                context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes))
+                context.insert(TaskRecord(title: trimmed, kind: kind, repetition: repetition, startDay: start, notes: notes, sortOrder: task.sortOrder))
             } else {
                 task.title = trimmed
                 task.kind = kind

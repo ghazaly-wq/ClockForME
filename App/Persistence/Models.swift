@@ -16,6 +16,8 @@ final class TaskRecord {
     var endDayISO: String?
     var notes: String
     var createdAt: Date
+    /// Position in lists (lower first). Default keeps existing data migratable.
+    var sortOrder: Int = 0
 
     init(
         id: UUID = UUID(),
@@ -24,10 +26,12 @@ final class TaskRecord {
         repetition: Repetition?,
         startDay: DayKey,
         notes: String = "",
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        sortOrder: Int = 0
     ) {
         self.id = id
         self.title = title
+        self.sortOrder = sortOrder
         self.kindRaw = kind.rawValue
         self.repetitionData = repetition.flatMap { try? JSONEncoder().encode($0) }
         self.startDayISO = startDay.isoString
