@@ -7,8 +7,11 @@ let package = Package(
     products: [
         .library(name: "HabitCore", targets: ["HabitCore"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/batoulapps/adhan-swift", from: "1.4.0")
+    ],
     targets: [
-        .target(name: "HabitCore"),
+        .target(name: "HabitCore", dependencies: [.product(name: "Adhan", package: "adhan-swift")]),
         .testTarget(name: "HabitCoreTests", dependencies: ["HabitCore"])
     ]
 )
