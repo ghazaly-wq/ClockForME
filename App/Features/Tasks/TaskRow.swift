@@ -8,6 +8,8 @@ struct TaskRow: View {
     let subtitle: String
     let isDone: Bool
     var showsCheck = true
+    /// Set for tasks that came from an alarm: its time, shown with an alarm icon.
+    var alarmTime: String? = nil
     let onToggle: () -> Void
     let onEdit: () -> Void
 
@@ -31,9 +33,17 @@ struct TaskRow: View {
                         .font(.body)
                         .strikethrough(isDone)
                         .foregroundStyle(isDone ? Theme.textSecondary : Theme.textPrimary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 4) {
+                        if let alarmTime {
+                            Image(systemName: "alarm.fill")
+                                .font(.caption2)
+                                .accessibilityHidden(true)
+                            Text(alarmTime + " · ")
+                        }
+                        Text(subtitle)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())

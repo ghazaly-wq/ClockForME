@@ -35,6 +35,7 @@ enum AlarmActions {
             let order = (tasks.map(\.sortOrder).max() ?? -1) + 1
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, sortOrder: order)
             task.alarmID = alarm.id
+            task.time = alarm.time
             context.insert(task)
             try? context.save()
             return
@@ -47,9 +48,11 @@ enum AlarmActions {
             linked.alarmID = nil
             let task = TaskRecord(title: alarm.title, kind: .main, repetition: repetition, startDay: start, notes: linked.notes, sortOrder: linked.sortOrder)
             task.alarmID = alarm.id
+            task.time = alarm.time
             context.insert(task)
         } else {
             linked.title = alarm.title
+            linked.time = alarm.time
             linked.kind = .main
             linked.repetition = repetition
             if case .once(let day) = repetition {
@@ -136,6 +139,19 @@ enum AlarmActions {
         try? context.save()
     }
 
+    /// Tasks made from an alarm before tasks had a time get it now.
+    static func backfillTaskTimes(context: ModelContext) {
+        let alarms = (try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []
+        let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
+        var changed = false
+        for task in tasks where task.endDay == nil && task.timeData == nil {
+            guard let alarmID = task.alarmID, let alarm = alarms.first(where: { $0.id == alarmID }) else { continue }
+            task.time = alarm.time
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
     // MARK: - Finished one-time alarms
 
     /// A one-time alarm switches itself off after it has rung (it stays in the list, like the Clock app).
@@ -167,6 +183,7 @@ enum AlarmActions {
     static func replan(container: ModelContainer) async {
         let context = ModelContext(container)
         expireFinished(context: context)
+        backfillTaskTimes(context: context)
         let alarms = ((try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []).map(\.rule)
         let location = PrayerLocation.load()
         await AlarmScheduler.replan(alarms: alarms, location: location)

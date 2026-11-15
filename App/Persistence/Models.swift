@@ -20,6 +20,8 @@ final class TaskRecord {
     var sortOrder: Int = 0
     /// The alarm this task was created from ("main-task alarm"), if any.
     var alarmID: UUID? = nil
+    /// JSON of `TimeSpec`: the time of the alarm this task came from, if any.
+    var timeData: Data? = nil
 
     init(
         id: UUID = UUID(),
@@ -61,6 +63,14 @@ extension TaskRecord {
                 repetitionData = nil
             }
         }
+    }
+
+    var time: TimeSpec? {
+        get {
+            guard let data = timeData else { return nil }
+            return try? JSONDecoder().decode(TimeSpec.self, from: data)
+        }
+        set { timeData = newValue.flatMap { try? JSONEncoder().encode($0) } }
     }
 
     var startDay: DayKey {

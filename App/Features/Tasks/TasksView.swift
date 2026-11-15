@@ -39,6 +39,9 @@ struct TasksView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(AppRouter.self) private var router
     @AppStorage(SettingsKey.dayStartHour) private var dayStartHour = 0
+    @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
+    @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
+    @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @Query(sort: [SortDescriptor(\TaskRecord.sortOrder), SortDescriptor(\TaskRecord.createdAt)])
     private var tasks: [TaskRecord]
     @Query private var completions: [CompletionRecord]
@@ -142,6 +145,7 @@ struct TasksView: View {
                                         subtitle: RepetitionText.summary(of: task.repetition, digits: digits),
                                         isDone: false,
                                         showsCheck: false,
+                                        alarmTime: alarmTimeText(task),
                                         onToggle: {},
                                         onEdit: { editor = .edit(task) }
                                     )
@@ -186,6 +190,7 @@ struct TasksView: View {
             title: task.title,
             subtitle: RepetitionText.summary(of: task.repetition, digits: digits),
             isDone: isDone,
+            alarmTime: alarmTimeText(task),
             onToggle: { toggle(task, snapshot: snapshot) },
             onEdit: { editor = .edit(task) }
         )
@@ -224,6 +229,22 @@ struct TasksView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
+    }
+
+    /// "7:30 ص" for a clock alarm; for a prayer alarm today's resolved time, or its wording without a location.
+    private func alarmTimeText(_ task: TaskRecord) -> String? {
+        guard let time = task.time else { return nil }
+        if case .prayer = time {
+            let calendar = Calendar.app
+            guard hasLocation else { return AlarmText.summary(of: time, digits: digits) }
+            let provider = AdhanPrayerTimes(latitude: latitude, longitude: longitude)
+            let rule = AlarmRule(title: "", repetition: .daily, time: time)
+            if let fire = NotificationPlanner.fireDate(of: rule, on: DayKey(date: now, calendar: calendar), provider: provider, calendar: calendar) {
+                return AlarmText.time(fire, digits: digits)
+            }
+            return AlarmText.summary(of: time, digits: digits)
+        }
+        return AlarmText.summary(of: time, digits: digits)
     }
 
     // MARK: - Undo
