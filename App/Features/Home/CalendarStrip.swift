@@ -168,7 +168,7 @@ struct CalendarStrip: View {
             for: task, on: day, provider: provider, calendar: calendar, now: Date(),
             showAll: showAllTimes, followsNextRing: followsNextRing, digits: digits
         )
-        HStack(spacing: 10) {
+        return HStack(spacing: 10) {
             Image(systemName: isDone ? "checkmark.circle.fill" : (isPast ? "xmark.circle" : "circle"))
                 .foregroundStyle(isDone ? Theme.primaryStrong : Theme.textSecondary)
                 .accessibilityHidden(true)
