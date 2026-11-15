@@ -15,10 +15,12 @@ struct CurvedTabBar: View {
                 .fill(Theme.barMuted)
                 .ignoresSafeArea(edges: .bottom)
 
-            HStack(spacing: 0) {
-                ForEach(rightTabs) { tabButton($0) }
-                Color.clear.frame(width: Metrics.homeRingDiameter)
-                ForEach(leftTabs) { tabButton($0) }
+            GlassEffectContainer(spacing: 8) {
+                HStack(spacing: 0) {
+                    ForEach(rightTabs) { tabButton($0) }
+                    Color.clear.frame(width: Metrics.homeRingDiameter)
+                    ForEach(leftTabs) { tabButton($0) }
+                }
             }
             .frame(height: Metrics.tabRowHeight)
             .padding(.top, Metrics.barRise)
@@ -43,9 +45,15 @@ struct CurvedTabBar: View {
                 Text(tab.title)
                     .font(.caption2.weight(.semibold))
             }
-            .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.7))
+            .foregroundStyle(Color.white.opacity(isSelected ? 1 : 0.85))
             .frame(maxWidth: .infinity, minHeight: 44)
-            .contentShape(Rectangle())
+            // Liquid Glass on every tab; the selected one is tinted with the accent, like the Home button.
+            .glassEffect(
+                isSelected ? .regular.tint(Theme.primary.opacity(0.9)).interactive() : .regular.interactive(),
+                in: Capsule()
+            )
+            .padding(.horizontal, 3)
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

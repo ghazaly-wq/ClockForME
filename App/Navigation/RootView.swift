@@ -18,6 +18,7 @@ struct RootView: View {
     @AppStorage(SettingsKey.prayerLatitude) private var latitude = 0.0
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var refreshTick = 0
 
     /// Anything that should make the notification plan be rebuilt.
@@ -84,7 +85,11 @@ struct RootView: View {
 
         ZStack {
             Theme.surface.ignoresSafeArea()
-            page(for: router.selectedTab)
+            page(for: router.currentTab)
+                .overlay(alignment: .leading) { edgeSwipeStrip }
+                .overlay(alignment: .trailing) { edgeSwipeStrip }
+                .id(router.currentTab)
+                .transition(tabTransition)
 
             if router.showDayComplete {
                 DayCompleteOverlay()
@@ -92,6 +97,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: router.showDayComplete)
+        .animation(reduceMotion ? .easeInOut(duration: 0.15) : .snappy(duration: 0.38), value: router.currentTab)
         .sheet(item: $router.unlock, onDismiss: { router.unlockSheetClosed() }) { info in
             AchievementUnlockSheet(info: info)
                 .appRoot()
@@ -138,6 +144,36 @@ struct RootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .achievementsNeedSync)) { _ in
             refreshTick += 1
         }
+    }
+
+    private var tabTransition: AnyTransition {
+        if reduceMotion { return .opacity }
+        let edge = router.tabEdge
+        let opposite: Edge = edge == .leading ? .trailing : .leading
+        return .asymmetric(
+            insertion: .move(edge: edge).combined(with: .opacity),
+            removal: .move(edge: opposite).combined(with: .opacity)
+        )
+    }
+
+    /// A thin strip on each screen edge: dragging inward from it moves to the next tab in the bar.
+    /// Starting at the edge keeps it from fighting row swipe actions, chip scrolls, charts or sliders.
+    private var edgeSwipeStrip: some View {
+        Color.clear
+            .frame(width: 18)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 24)
+                    .onEnded { value in
+                        let dx = value.translation.width, dy = value.translation.height
+                        guard abs(dx) > 70, abs(dx) > abs(dy) * 1.5 else { return }
+                        // Finger moving left: the tab to the right of this one, and vice versa.
+                        if let next = router.currentTab.neighbor(dx < 0 ? -1 : 1) {
+                            router.select(next)
+                        }
+                    }
+            )
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder

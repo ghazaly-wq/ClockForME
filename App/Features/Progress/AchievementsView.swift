@@ -52,14 +52,17 @@ struct AchievementsView: View {
                 }
                 .pickerStyle(.segmented)
 
-                switch router.achievementsSegment {
-                case .achievements:
-                    AchievementGrid(snapshot: snapshot, unlocks: unlocks)
-                case .rewards:
-                    RewardsSection(snapshot: snapshot, rewards: rewards, editor: $rewardEditor)
-                case .shop:
-                    ShopSection(snapshot: snapshot, purchases: purchases)
+                Group {
+                    switch router.achievementsSegment {
+                    case .achievements:
+                        AchievementGrid(snapshot: snapshot, unlocks: unlocks).transition(.opacity)
+                    case .rewards:
+                        RewardsSection(snapshot: snapshot, rewards: rewards, editor: $rewardEditor).transition(.opacity)
+                    case .shop:
+                        ShopSection(snapshot: snapshot, purchases: purchases).transition(.opacity)
+                    }
                 }
+                .appAnimation(value: router.achievementsSegment)
             }
         }
         .sheet(isPresented: $showStats) {

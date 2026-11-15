@@ -56,12 +56,16 @@ struct PageDetailView: View {
                     case .use:
                         PageUseView(page: page, tab: tab, sessionRecords: sessions.filter { $0.pageID == page.id })
                             .id(tab.id)
+                            .transition(.opacity)
                     case .edit:
                         PageEditView(page: pageBinding, tabID: tab.id)
                             .id(tab.id)
+                            .transition(.opacity)
                     }
                 }
             }
+            .appAnimation(value: mode)
+            .appAnimation(value: activeTabID)
         }
         .sheet(isPresented: $showSettings, onDismiss: saveLinks) {
             PageSettingsView(

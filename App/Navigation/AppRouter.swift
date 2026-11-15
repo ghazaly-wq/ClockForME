@@ -22,7 +22,15 @@ enum AchievementsSegment: String, CaseIterable {
 @MainActor
 @Observable
 final class AppRouter {
-    var selectedTab: AppTab = .home
+    private(set) var currentTab: AppTab = .home
+    /// Side the next tab slides in from (leading = right in this RTL app).
+    private(set) var tabEdge: Edge = .trailing
+
+    /// The tab on screen. Setting it from anywhere (deep links, buttons) slides to it.
+    var selectedTab: AppTab {
+        get { currentTab }
+        set { select(newValue) }
+    }
     var showSettings = false
     var showDayComplete = false
     var levelUp: LevelUpInfo?
@@ -32,6 +40,17 @@ final class AppRouter {
     /// A custom page to open on the "صفحاتي" tab (set by alarms, tasks and links).
     var openPageID: UUID?
     private var pendingLevelUp: LevelUpInfo?
+
+    /// Tabs further left in the bar slide in from the left, tabs further right from the right.
+    /// The direction is set first and the change follows on the next turn, so the screen
+    /// that leaves already knows which way to go.
+    func select(_ tab: AppTab) {
+        guard tab != currentTab else { return }
+        tabEdge = tab.order > currentTab.order ? .trailing : .leading
+        Task { @MainActor [weak self] in
+            self?.currentTab = tab
+        }
+    }
 
     func celebrate(_ outcome: CompletionOutcome) {
         if outcome.completedDay {
