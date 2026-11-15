@@ -62,7 +62,7 @@ struct AchievementsView: View {
                         ShopSection(snapshot: snapshot, purchases: purchases).transition(.opacity)
                     }
                 }
-                .appAnimation(value: router.achievementsSegment)
+                .fadeAnimation(value: router.achievementsSegment)
             }
         }
         .sheet(isPresented: $showStats) {

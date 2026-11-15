@@ -19,6 +19,8 @@ struct RootView: View {
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var visited: Set<AppTab> = [.home]
+    @State private var dragX: CGFloat = 0
     @State private var refreshTick = 0
 
     /// Anything that should make the notification plan be rebuilt.
@@ -85,11 +87,22 @@ struct RootView: View {
 
         ZStack {
             Theme.surface.ignoresSafeArea()
-            page(for: router.currentTab)
-                .overlay(alignment: .leading) { edgeSwipeStrip }
-                .overlay(alignment: .trailing) { edgeSwipeStrip }
-                .id(router.currentTab)
-                .transition(tabTransition)
+            // Every visited tab stays alive (hidden ones keep their scroll position, open page and
+            // segment), and switching is a quick cross-dissolve.
+            ZStack {
+              ForEach(AppTab.allCases) { tab in
+                if visited.contains(tab) || tab == router.selectedTab {
+                    page(for: tab)
+                        .offset(x: tab == router.selectedTab ? dragX : 0)
+                        .opacity(tab == router.selectedTab ? 1 : 0)
+                        .allowsHitTesting(tab == router.selectedTab)
+                        .accessibilityHidden(tab != router.selectedTab)
+                }
+              }
+            }
+            .animation(reduceMotion ? .easeInOut(duration: 0.12) : .easeInOut(duration: 0.2), value: router.selectedTab)
+            .overlay(alignment: .leading) { edgeSwipeStrip }
+            .overlay(alignment: .trailing) { edgeSwipeStrip }
 
             if router.showDayComplete {
                 DayCompleteOverlay()
@@ -97,7 +110,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.25), value: router.showDayComplete)
-        .animation(reduceMotion ? .easeInOut(duration: 0.15) : .snappy(duration: 0.38), value: router.currentTab)
+        .onChange(of: router.selectedTab, initial: true) { _, tab in visited.insert(tab) }
         .sheet(item: $router.unlock, onDismiss: { router.unlockSheetClosed() }) { info in
             AchievementUnlockSheet(info: info)
                 .appRoot()
@@ -146,30 +159,27 @@ struct RootView: View {
         }
     }
 
-    private var tabTransition: AnyTransition {
-        if reduceMotion { return .opacity }
-        let edge = router.tabEdge
-        let opposite: Edge = edge == .leading ? .trailing : .leading
-        return .asymmetric(
-            insertion: .move(edge: edge).combined(with: .opacity),
-            removal: .move(edge: opposite).combined(with: .opacity)
-        )
-    }
-
     /// A thin strip on each screen edge: dragging inward from it moves to the next tab in the bar.
     /// Starting at the edge keeps it from fighting row swipe actions, chip scrolls, charts or sliders.
+    /// The screen follows the finger a little (damped) and the switch happens past a threshold.
     private var edgeSwipeStrip: some View {
         Color.clear
             .frame(width: 18)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 24)
+                DragGesture(minimumDistance: 12)
+                    .onChanged { value in
+                        guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                        let limit: CGFloat = 60
+                        dragX = max(-limit, min(limit, value.translation.width * 0.3))
+                    }
                     .onEnded { value in
                         let dx = value.translation.width, dy = value.translation.height
-                        guard abs(dx) > 70, abs(dx) > abs(dy) * 1.5 else { return }
+                        let commit = abs(dx) > 70 && abs(dx) > abs(dy) * 1.5
+                        withAnimation(.smooth(duration: 0.25)) { dragX = 0 }
                         // Finger moving left: the tab to the right of this one, and vice versa.
-                        if let next = router.currentTab.neighbor(dx < 0 ? -1 : 1) {
-                            router.select(next)
+                        if commit, let next = router.selectedTab.neighbor(dx < 0 ? -1 : 1) {
+                            router.selectedTab = next
                         }
                     }
             )

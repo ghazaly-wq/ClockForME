@@ -21,13 +21,14 @@ struct PagesView: View {
             if let openID, let record = pages.first(where: { $0.id == openID }) {
                 PageDetailView(record: record, onBack: { self.openID = nil }, onOpen: { self.openID = $0 })
                     .id(record.id)
-                    .motionTransition(edge: .leading)
+                    .background(Theme.surface)
+                    .pushDetailTransition()
             } else {
                 list
-                    .motionTransition(edge: .trailing)
+                    .pushBackgroundTransition()
             }
         }
-        .appAnimation(value: openID)
+        .pushAnimation(value: openID)
         // Alarms, tasks and links can ask to open a page.
         .onChange(of: router.openPageID, initial: true) { _, newValue in
             if let newValue {

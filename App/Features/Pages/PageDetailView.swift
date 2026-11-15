@@ -64,8 +64,8 @@ struct PageDetailView: View {
                     }
                 }
             }
-            .appAnimation(value: mode)
-            .appAnimation(value: activeTabID)
+            .fadeAnimation(value: mode)
+            .fadeAnimation(value: activeTabID)
         }
         .sheet(isPresented: $showSettings, onDismiss: saveLinks) {
             PageSettingsView(
