@@ -16,7 +16,8 @@ final class AppEnvironment {
         do {
             container = try ModelContainer(
                 for: TaskRecord.self, CompletionRecord.self, AlarmRecord.self,
-                AchievementUnlockRecord.self, PurchaseRecord.self, RewardRecord.self
+                AchievementUnlockRecord.self, PurchaseRecord.self, RewardRecord.self,
+                PageRecord.self, PageSessionRecord.self
             )
         } catch {
             fatalError("Could not open the database: \(error)")

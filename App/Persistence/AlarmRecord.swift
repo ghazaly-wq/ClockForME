@@ -13,6 +13,8 @@ final class AlarmRecord {
     var timeData: Data
     var isMainTask: Bool
     var createdAt: Date
+    /// The custom page this alarm belongs to, if any.
+    var linkedPageID: UUID? = nil
 
     init(rule: AlarmRule, createdAt: Date = Date()) {
         self.id = rule.id
@@ -23,6 +25,7 @@ final class AlarmRecord {
         self.timeData = (try? JSONEncoder().encode(rule.time)) ?? Data()
         self.isMainTask = rule.isMainTask
         self.createdAt = createdAt
+        self.linkedPageID = rule.linkedPageID
     }
 }
 
@@ -38,7 +41,7 @@ extension AlarmRecord {
     }
 
     var rule: AlarmRule {
-        AlarmRule(id: id, title: title, note: note, isEnabled: isEnabled, repetition: repetition, time: time, isMainTask: isMainTask)
+        AlarmRule(id: id, title: title, note: note, isEnabled: isEnabled, repetition: repetition, time: time, isMainTask: isMainTask, linkedPageID: linkedPageID)
     }
 
     func apply(_ rule: AlarmRule) {
@@ -48,10 +51,11 @@ extension AlarmRecord {
         repetition = rule.repetition
         time = rule.time
         isMainTask = rule.isMainTask
+        linkedPageID = rule.linkedPageID
     }
 
     /// Changes whenever anything that affects notifications changes.
     var fingerprint: String {
-        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())"
+        "\(id.uuidString)|\(title)|\(note)|\(isEnabled)|\(isMainTask)|\(linkedPageID?.uuidString ?? "")|\(repetitionData.base64EncodedString())|\(timeData.base64EncodedString())"
     }
 }

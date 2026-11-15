@@ -257,6 +257,7 @@ final class PagesTests: XCTestCase {
         XCTAssertEqual(rule.repetition, .weekly([.monday]))
         XCTAssertEqual(rule.time, .prayer(.isha, .after, hours: 0, minutes: 30))
         XCTAssertFalse(rule.isMainTask)   // the page owns its task
+        XCTAssertEqual(rule.linkedPageID, page.id)
         XCTAssertTrue(PageLogic.isScheduled(page, on: d(2026, 11, 2), calendar: cal))   // Monday
         XCTAssertFalse(PageLogic.isScheduled(page, on: d(2026, 11, 3), calendar: cal))
     }
@@ -282,5 +283,29 @@ final class PagesTests: XCTestCase {
         XCTAssertEqual(PageTemplates.workout().tabs.count, 3)
         XCTAssertTrue(PageTemplates.workout().rotatesTabs)
         XCTAssertEqual(PageTemplates.blank().tabs.count, 1)
+    }
+
+    // MARK: Number text
+
+    func testParseNumberAcceptsArabicDigitsAndSeparators() {
+        XCTAssertEqual(NumberFormatting.parse("12"), 12)
+        XCTAssertEqual(NumberFormatting.parse("٣٫٥"), 3.5)
+        XCTAssertEqual(NumberFormatting.parse("2,5"), 2.5)
+        XCTAssertEqual(NumberFormatting.parse(" ٤٠ "), 40)
+        XCTAssertNil(NumberFormatting.parse(""))
+        XCTAssertNil(NumberFormatting.parse("abc"))
+    }
+
+    func testFormatNumberDropsTrailingZeros() {
+        XCTAssertEqual(NumberFormatting.string(12, style: .western, decimals: 2), "12")
+        XCTAssertEqual(NumberFormatting.string(12.5, style: .western, decimals: 2), "12.5")
+        XCTAssertEqual(NumberFormatting.string(12.456, style: .western, decimals: 2), "12.46")
+        XCTAssertEqual(NumberFormatting.string(3.5, style: .arabicIndic, decimals: 2), "٣.٥")
+    }
+
+    func testDurationText() {
+        XCTAssertEqual(NumberFormatting.clock(seconds: 90), "01:30")
+        XCTAssertEqual(NumberFormatting.clock(seconds: 3725), "1:02:05")
+        XCTAssertEqual(NumberFormatting.clock(seconds: -4), "00:00")
     }
 }

@@ -14,16 +14,27 @@ struct OpenHabitsIntent: LiveActivityIntent {
     @Parameter(title: "tasks")
     var showTasks: Bool
 
+    @Parameter(title: "page")
+    var pageID: String
+
     init() {}
 
-    init(showTasks: Bool) {
+    init(showTasks: Bool, pageID: String = "") {
         self.showTasks = showTasks
+        self.pageID = pageID
     }
 
     func perform() async throws -> some IntentResult {
         let tasks = showTasks
+        let page = UUID(uuidString: pageID)
         await MainActor.run {
-            AppEnvironment.shared.router.selectedTab = tasks ? .tasks : .alarms
+            let router = AppEnvironment.shared.router
+            if let page {
+                router.openPageID = page
+                router.selectedTab = .pages
+            } else {
+                router.selectedTab = tasks ? .tasks : .alarms
+            }
         }
         return .result()
     }
@@ -144,14 +155,14 @@ enum AlarmScheduler {
             countdownDuration: Alarm.CountdownDuration(preAlert: nil, postAlert: snoozeSeconds),
             schedule: .fixed(fireDate),
             attributes: attributes,
-            stopIntent: OpenHabitsIntent(showTasks: rule.isMainTask),
+            stopIntent: OpenHabitsIntent(showTasks: rule.isMainTask, pageID: rule.linkedPageID?.uuidString ?? ""),
             secondaryIntent: nil,
             sound: .default
         )
     }
 
     private static func fingerprint(of rule: AlarmRule) -> String {
-        "\(rule.title)|\(rule.isMainTask)"
+        "\(rule.title)|\(rule.isMainTask)|\(rule.linkedPageID?.uuidString ?? "")"
     }
 
     /// The same alarm moment + same text always gives the same id, so re-planning is a cheap diff.

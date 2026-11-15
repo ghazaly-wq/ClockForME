@@ -22,6 +22,8 @@ final class TaskRecord {
     var alarmID: UUID? = nil
     /// JSON of `TimeSpec`: the time of the alarm this task came from, if any.
     var timeData: Data? = nil
+    /// The custom page this task belongs to (finishing the page's session completes it).
+    var pageID: UUID? = nil
 
     init(
         id: UUID = UUID(),

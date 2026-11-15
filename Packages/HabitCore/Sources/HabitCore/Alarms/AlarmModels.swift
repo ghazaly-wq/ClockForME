@@ -22,6 +22,8 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     public var repetition: Repetition
     public var time: TimeSpec
     public var isMainTask: Bool
+    /// Set when the alarm belongs to a custom page (stopping it opens that page).
+    public var linkedPageID: UUID?
 
     public init(
         id: UUID = UUID(),
@@ -30,7 +32,8 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         isEnabled: Bool = true,
         repetition: Repetition,
         time: TimeSpec,
-        isMainTask: Bool = false
+        isMainTask: Bool = false,
+        linkedPageID: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -39,5 +42,6 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         self.repetition = repetition
         self.time = time
         self.isMainTask = isMainTask
+        self.linkedPageID = linkedPageID
     }
 }

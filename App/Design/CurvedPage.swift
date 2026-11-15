@@ -1,27 +1,44 @@
 import SwiftUI
 
+/// An extra round button in the header (e.g. the edit/use toggle on a custom page).
+struct HeaderButton: Identifiable {
+    let id = UUID()
+    let symbol: String
+    let label: LocalizedStringKey
+    let action: () -> Void
+}
+
 /// Green header with the arc, a bold white title and its actions (optional "+", settings gear).
 /// It grows with Dynamic Type instead of clipping.
 struct CurvedHeader: View {
     let title: LocalizedStringKey
     let subtitle: String?
     let onAdd: (() -> Void)?
+    let onBack: (() -> Void)?
+    let extraButtons: [HeaderButton]
     let onSettings: () -> Void
 
     init(
         title: LocalizedStringKey,
         subtitle: String? = nil,
         onAdd: (() -> Void)? = nil,
+        onBack: (() -> Void)? = nil,
+        extraButtons: [HeaderButton] = [],
         onSettings: @escaping () -> Void
     ) {
         self.title = title
         self.subtitle = subtitle
         self.onAdd = onAdd
+        self.onBack = onBack
+        self.extraButtons = extraButtons
         self.onSettings = onSettings
     }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
+            if let onBack {
+                headerButton(symbol: "chevron.backward", label: "رجوع", action: onBack)
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.largeTitle.bold())
@@ -34,6 +51,9 @@ struct CurvedHeader: View {
             }
             Spacer(minLength: 0)
             HStack(spacing: 0) {
+                ForEach(extraButtons) { button in
+                    headerButton(symbol: button.symbol, label: button.label, action: button.action)
+                }
                 if let onAdd {
                     headerButton(symbol: "plus", label: "إضافة", action: onAdd)
                 }
@@ -73,6 +93,8 @@ struct CurvedPage<Content: View>: View {
     let subtitle: String?
     let scrollable: Bool
     let onAdd: (() -> Void)?
+    let onBack: (() -> Void)?
+    let extraButtons: [HeaderButton]
     let content: Content
 
     init(
@@ -80,18 +102,22 @@ struct CurvedPage<Content: View>: View {
         subtitle: String? = nil,
         scrollable: Bool = true,
         onAdd: (() -> Void)? = nil,
+        onBack: (() -> Void)? = nil,
+        extraButtons: [HeaderButton] = [],
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
         self.scrollable = scrollable
         self.onAdd = onAdd
+        self.onBack = onBack
+        self.extraButtons = extraButtons
         self.content = content()
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            CurvedHeader(title: title, subtitle: subtitle, onAdd: onAdd) {
+            CurvedHeader(title: title, subtitle: subtitle, onAdd: onAdd, onBack: onBack, extraButtons: extraButtons) {
                 router.showSettings = true
             }
             if scrollable {

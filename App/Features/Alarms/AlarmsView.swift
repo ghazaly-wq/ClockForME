@@ -123,7 +123,7 @@ struct AlarmsView: View {
             : RepetitionText.summary(of: alarm.repetition, digits: digits)
 
         return HStack(spacing: 8) {
-            Button { editor = .edit(alarm) } label: {
+            Button { openAlarm(alarm) } label: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(timeText)
                         .font(.system(size: 38, weight: .light))
@@ -133,6 +133,14 @@ struct AlarmsView: View {
                         Text(alarm.title)
                             .font(.subheadline.bold())
                             .foregroundStyle(Theme.textPrimary)
+                        if alarm.linkedPageID != nil {
+                            Label("صفحة", systemImage: "square.grid.2x2")
+                                .font(.caption2.bold())
+                                .foregroundStyle(Theme.primaryStrong)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .overlay(Capsule().stroke(Theme.primaryStrong, lineWidth: 1))
+                        }
                         if alarm.isMainTask {
                             Label("مهمة رئيسية", systemImage: "star.fill")
                                 .font(.caption2.bold())
@@ -163,6 +171,7 @@ struct AlarmsView: View {
         .opacity(alarm.isEnabled ? 1 : 0.45)
         .padding(.vertical, 4)
         .swipeActions(edge: .trailing) {
+            if alarm.linkedPageID == nil {
             Button(role: .destructive) {
                 showUndo(AlarmActions.delete(
                     alarm, tasks: tasks, completions: completions, context: context,
@@ -171,10 +180,21 @@ struct AlarmsView: View {
             } label: {
                 Label("حذف", systemImage: "trash")
             }
-            Button { editor = .edit(alarm) } label: {
+            }
+            Button { openAlarm(alarm) } label: {
                 Label("تعديل", systemImage: "pencil")
             }
             .tint(Theme.textSecondary)
+        }
+    }
+
+    /// An alarm that belongs to a custom page opens the page (its schedule is edited there).
+    private func openAlarm(_ alarm: AlarmRecord) {
+        if let pageID = alarm.linkedPageID {
+            router.openPageID = pageID
+            router.selectedTab = .pages
+        } else {
+            editor = .edit(alarm)
         }
     }
 

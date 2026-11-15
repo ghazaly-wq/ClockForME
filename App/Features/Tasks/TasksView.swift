@@ -50,6 +50,16 @@ struct TasksView: View {
     @Query private var purchases: [PurchaseRecord]
     @Query private var rewards: [RewardRecord]
 
+    /// A task that belongs to a custom page opens that page; any other task opens its editor.
+    private func openEditor(_ task: TaskRecord) {
+        if let pageID = task.pageID {
+            router.openPageID = pageID
+            router.selectedTab = .pages
+        } else {
+            editor = .edit(task)
+        }
+    }
+
     @State private var segment: TaskKind = .main
     @State private var filter: TaskFilter = .all
     @State private var now = Date()
@@ -152,7 +162,7 @@ struct TasksView: View {
                                         showsCheck: false,
                                         alarmTime: alarmTimeText(task),
                                         onToggle: {},
-                                        onEdit: { editor = .edit(task) }
+                                        onEdit: { openEditor(task) }
                                     )
                                 }
                             },
@@ -197,7 +207,7 @@ struct TasksView: View {
             isDone: isDone,
             alarmTime: alarmTimeText(task),
             onToggle: { toggle(task, snapshot: snapshot) },
-            onEdit: { editor = .edit(task) }
+            onEdit: { openEditor(task) }
         )
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -214,7 +224,7 @@ struct TasksView: View {
                 Label("حذف", systemImage: "trash")
             }
             Button {
-                editor = .edit(task)
+                openEditor(task)
             } label: {
                 Label("تعديل", systemImage: "pencil")
             }

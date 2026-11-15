@@ -157,7 +157,7 @@ public enum PageLogic {
         guard let schedule = page.schedule else { return nil }
         return AlarmRule(
             id: existingID, title: page.name, repetition: schedule.repetition, time: schedule.time,
-            isMainTask: false
+            isMainTask: false, linkedPageID: page.id
         )
     }
 }

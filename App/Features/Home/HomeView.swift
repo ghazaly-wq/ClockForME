@@ -18,6 +18,7 @@ struct HomeView: View {
     @Query private var unlocks: [AchievementUnlockRecord]
     @Query private var purchases: [PurchaseRecord]
     @Query private var rewards: [RewardRecord]
+    @Query private var pageRecords: [PageRecord]
     @AppStorage(SettingsKey.equippedLiveStyle) private var liveStyle = ShopCatalog.defaultLiveStyle
     private let live = LiveActivityController.shared
 
@@ -253,7 +254,29 @@ struct HomeView: View {
         }
     }
 
+    private var pinnedPages: [PageDefinition] {
+        pageRecords.filter { !$0.isTemplate }.map(\.definition).filter(\.pinnedToHome)
+    }
+
     private var quickActions: some View {
+        VStack(spacing: 12) {
+            quickActionRow
+            ForEach(pinnedPages) { page in
+                Button {
+                    router.openPageID = page.id
+                    router.selectedTab = .pages
+                } label: {
+                    Label(page.emoji + " " + page.name, systemImage: "square.grid.2x2")
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.bordered)
+                .font(.subheadline.bold())
+                .tint(Theme.primaryStrong)
+            }
+        }
+    }
+
+    private var quickActionRow: some View {
         HStack(spacing: 12) {
             Button { taskSheet = .new(.main) } label: {
                 Label("مهمة جديدة", systemImage: "checklist")

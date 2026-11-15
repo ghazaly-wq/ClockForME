@@ -29,6 +29,8 @@ final class AppRouter {
     var unlock: UnlockInfo?
     /// Kept in the router so it survives a theme change rebuilding the views.
     var achievementsSegment: AchievementsSegment = .achievements
+    /// A custom page to open on the "صفحاتي" tab (set by alarms, tasks and links).
+    var openPageID: UUID?
     private var pendingLevelUp: LevelUpInfo?
 
     func celebrate(_ outcome: CompletionOutcome) {
