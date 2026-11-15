@@ -83,6 +83,32 @@ final class Phase4Tests: XCTestCase {
         for c in ShopCategory.allCases { XCTAssertNotNil(ShopCatalog.item(id: ShopCatalog.defaultID(for: c))) }
     }
 
+    func testShopCatalogIsConsistent() {
+        let ids = ShopCatalog.all.map(\.id)
+        XCTAssertEqual(Set(ids).count, ids.count, "item ids must be unique")
+        for item in ShopCatalog.all {
+            XCTAssertTrue(item.id.hasPrefix(prefix(of: item.category)), "\(item.id) has the wrong prefix")
+            XCTAssertGreaterThanOrEqual(item.price, 0)
+        }
+        for c in ShopCategory.allCases {
+            let free = ShopCatalog.items(in: c).filter(\.isFree)
+            XCTAssertEqual(free.map(\.id), [ShopCatalog.defaultID(for: c)], "each category has exactly its default as free item")
+        }
+        XCTAssertEqual(ShopCatalog.items(in: .appIcon).count, 11)
+        // Cosmetics only: nothing in the shop can touch the streak or XP.
+        XCTAssertFalse(ids.contains { $0.contains("freeze") || $0.contains("skip") || $0.contains("xp") })
+    }
+
+    private func prefix(of category: ShopCategory) -> String {
+        switch category {
+        case .theme: return "theme."
+        case .frame: return "frame."
+        case .effect: return "effect."
+        case .liveStyle: return "live."
+        case .appIcon: return "icon."
+        }
+    }
+
     func testWeeklyCompletionAndHeatmap() {
         // 2026-03-01 is a Sunday; calendar is Sunday-first.
         let base = d(2026, 3, 1)

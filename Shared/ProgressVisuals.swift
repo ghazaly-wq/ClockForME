@@ -39,6 +39,15 @@ struct SegmentBar: View {
                 }
                 .frame(width: height + 8, height: height + 8)
                 .frame(maxWidth: .infinity)
+        case "live.thin":
+            Capsule()
+                .fill(done ? Theme.primary : Theme.primary.opacity(0.25))
+                .frame(height: max(3, height / 2.5))
+        case "live.stars":
+            Image(systemName: done ? "star.fill" : "star")
+                .font(.system(size: height + 6, weight: .bold))
+                .foregroundStyle(done ? Theme.primary : Theme.primary.opacity(0.45))
+                .frame(maxWidth: .infinity)
         default:
             Capsule()
                 .fill(done ? Theme.primary : Theme.primary.opacity(0.2))

@@ -1,6 +1,7 @@
 import HabitCore
 import SwiftData
 import SwiftUI
+import WidgetKit
 
 struct RootView: View {
     @Environment(AppRouter.self) private var router
@@ -12,6 +13,7 @@ struct RootView: View {
     @Query private var completions: [CompletionRecord]
     @AppStorage(SettingsKey.digitStyle) private var digitRaw = DigitStyle.western.rawValue
     @AppStorage(SettingsKey.equippedLiveStyle) private var liveStyle = ShopCatalog.defaultLiveStyle
+    @AppStorage(SettingsKey.equippedTheme) private var equippedTheme = ShopCatalog.defaultTheme
     @AppStorage(SettingsKey.liveActivityEnabled) private var liveEnabled = true
     @AppStorage(SettingsKey.liveActivityAutoStart) private var liveAutoStart = true
     @AppStorage(SettingsKey.hasPrayerLocation) private var hasLocation = false
@@ -53,6 +55,7 @@ struct RootView: View {
         hasher.combine(dayStartHour)
         hasher.combine(digitRaw)
         hasher.combine(liveStyle)
+        hasher.combine(equippedTheme)
         hasher.combine(liveEnabled)
         hasher.combine(liveAutoStart)
         hasher.combine(hasLocation)
@@ -169,6 +172,11 @@ struct RootView: View {
         }
         .task {
             await LiveActivityController.shared.updateMorningReminder()
+        }
+        // The widget extension reads the theme from the App Group defaults.
+        .task(id: equippedTheme) {
+            Theme.mirrorThemeToSharedDefaults(equippedTheme)
+            WidgetCenter.shared.reloadAllTimelines()
         }
         .onOpenURL { handle($0) }
         // Catches achievements earned while the app was closed or from older history.

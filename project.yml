@@ -53,6 +53,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ghazaly.habits
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES: "IconNight IconOcean IconViolet IconSunset IconRose IconGraphite IconTeal IconIndigo IconCrimson IconGold"
         TARGETED_DEVICE_FAMILY: "1"
   HabitsWidgets:
     type: app-extension

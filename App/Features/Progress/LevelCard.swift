@@ -37,6 +37,21 @@ struct FrameBorder: View {
                 shape.strokeBorder(Theme.gold, lineWidth: 2.5)
                 shape.inset(by: 6).strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1.5)
             }
+        case "frame.dashed":
+            shape.strokeBorder(Theme.primary, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [2, 7]))
+        case "frame.glow":
+            shape
+                .strokeBorder(Theme.primary, lineWidth: 2.5)
+                .shadow(color: Theme.primary.opacity(0.8), radius: 6)
+                .shadow(color: Theme.primary.opacity(0.5), radius: 12)
+        case "frame.rainbow":
+            shape.strokeBorder(
+                AngularGradient(
+                    colors: [.red, .orange, .yellow, .green, .blue, .purple, .red],
+                    center: .center
+                ),
+                lineWidth: 4
+            )
         default:
             EmptyView()
         }

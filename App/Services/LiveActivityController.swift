@@ -131,7 +131,8 @@ final class LiveActivityController {
             nextTitle: next?.title,
             nextTime: next.flatMap { snapshot.effectiveTime(of: $0, at: Date()) },
             arabicDigits: snapshot.arabicDigits,
-            styleID: snapshot.styleID
+            styleID: snapshot.styleID,
+            themeID: UserDefaults.standard.string(forKey: SettingsKey.equippedTheme)
         )
     }
 

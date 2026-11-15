@@ -11,6 +11,8 @@ struct TodayActivityAttributes: ActivityAttributes {
         var arabicDigits: Bool
         /// Shop style of the progress bar (`live.default`, `live.blocks`, `live.dots`).
         var styleID: String
+        /// Shop theme id; optional so an activity started by an older build still decodes.
+        var themeID: String? = nil
 
         var completed: Int { segments.filter { $0 }.count }
         var total: Int { segments.count }

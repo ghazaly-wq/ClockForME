@@ -19,9 +19,13 @@ struct ConfettiView: View {
     @State private var pieces: [Piece] = (0..<44).map { _ in Piece() }
 
     private var colors: [Color] {
-        effectID == "effect.gold"
-            ? [Theme.gold, Color.yellow, Theme.gold.opacity(0.7), Color.orange]
-            : [Theme.primary, Theme.gold, Theme.primaryStrong, Theme.barMuted]
+        switch effectID {
+        case "effect.gold": return [Theme.gold, Color.yellow, Theme.gold.opacity(0.7), Color.orange]
+        case "effect.hearts": return [Color.red, Color.pink, Color.red.opacity(0.7), Color.pink.opacity(0.8)]
+        case "effect.bubbles": return [Color.cyan, Color.blue.opacity(0.6), Color.cyan.opacity(0.6), Theme.primary.opacity(0.7)]
+        case "effect.flames": return [Color.orange, Color.red, Color.yellow, Color.orange.opacity(0.7)]
+        default: return [Theme.primary, Theme.gold, Theme.primaryStrong, Theme.barMuted]
+        }
     }
 
     var body: some View {
@@ -42,12 +46,26 @@ struct ConfettiView: View {
         .accessibilityHidden(true)
     }
 
+    /// SF Symbol used as the falling piece for each symbol-based effect.
+    static func symbol(for effectID: String) -> String? {
+        switch effectID {
+        case "effect.stars": return "star.fill"
+        case "effect.hearts": return "heart.fill"
+        case "effect.flames": return "flame.fill"
+        default: return nil
+        }
+    }
+
     @ViewBuilder
     private func pieceShape(_ piece: Piece) -> some View {
-        if effectID == "effect.stars" {
-            Image(systemName: "star.fill")
+        if let symbol = Self.symbol(for: effectID) {
+            Image(systemName: symbol)
                 .font(.system(size: piece.width * 1.8))
                 .foregroundStyle(colors[piece.colorIndex])
+        } else if effectID == "effect.bubbles" {
+            Circle()
+                .strokeBorder(colors[piece.colorIndex], lineWidth: 2)
+                .frame(width: piece.width * 2, height: piece.width * 2)
         } else {
             RoundedRectangle(cornerRadius: 2, style: .continuous)
                 .fill(colors[piece.colorIndex])

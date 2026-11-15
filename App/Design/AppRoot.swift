@@ -15,6 +15,7 @@ enum SettingsKey {
     static let equippedFrame = "equippedFrame"
     static let equippedEffect = "equippedEffect"
     static let equippedLiveStyle = "equippedLiveStyle"
+    static let equippedIcon = "equippedIcon"
     static let liveActivityEnabled = "liveActivityEnabled"
     static let liveActivityAutoStart = "liveActivityAutoStart"
     static let morningEnabled = "morningReminderEnabled"
