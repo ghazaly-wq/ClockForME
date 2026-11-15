@@ -14,6 +14,25 @@ enum EditorTarget: Identifiable {
     }
 }
 
+/// Narrows the lists on the Tasks page by how a task repeats.
+enum TaskFilter: Hashable {
+    case all, once, routine
+
+    func matches(_ task: TaskRecord) -> Bool {
+        switch self {
+        case .all: return true
+        case .once:
+            if case .weekly? = task.repetition { return false }
+            if case .monthly? = task.repetition { return false }
+            return true   // a dated task, or "anytime until done"
+        case .routine:
+            if case .weekly? = task.repetition { return true }
+            if case .monthly? = task.repetition { return true }
+            return false
+        }
+    }
+}
+
 struct TasksView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.digitStyle) private var digits
@@ -25,6 +44,7 @@ struct TasksView: View {
     @Query private var completions: [CompletionRecord]
 
     @State private var segment: TaskKind = .main
+    @State private var filter: TaskFilter = .all
     @State private var now = Date()
     @State private var editor: EditorTarget?
     @State private var upcomingExpanded = false
@@ -42,12 +62,22 @@ struct TasksView: View {
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
         let doneEver = Set(completions.map(\.taskID))
         let mainToday = todayTasks(.main, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
-        let list = segment == .main
+        let list = (segment == .main
             ? mainToday
-            : todayTasks(.secondary, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
-        let upcoming = upcomingTasks(segment, today: snapshot.today)
+            : todayTasks(.secondary, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar))
+            .filter(filter.matches)
+        let upcoming = upcomingTasks(segment, today: snapshot.today).filter(filter.matches)
 
         CurvedPage(title: "المهمات", scrollable: false, onAdd: { editor = .new(segment) }) {
+            VStack(spacing: 0) {
+            Picker("تصفية المهمات", selection: $filter) {
+                Text("الكل").tag(TaskFilter.all)
+                Text("مهمات لمرة واحدة").tag(TaskFilter.once)
+                Text("مهمات روتينية").tag(TaskFilter.routine)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 8)
             List {
                 Section {
                     TodayCard(
@@ -130,6 +160,7 @@ struct TasksView: View {
             .scrollContentBackground(.hidden)
             .contentMargins(.bottom, Metrics.homeRingDiameter / 2 + 8, for: .scrollContent)
             .environment(\.editMode, $editMode)
+            }
         }
         .overlay(alignment: .bottom) {
             if let undoToken {
@@ -183,7 +214,7 @@ struct TasksView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Text(segment == .main ? "ما عندك مهمات رئيسية اليوم — أضف أول مهمة" : "ما عندك مهمات فرعية اليوم")
+            Text(filter != .all ? "ما فيه مهمات بهذا الفلتر اليوم" : (segment == .main ? "ما عندك مهمات رئيسية اليوم — أضف أول مهمة" : "ما عندك مهمات فرعية اليوم"))
                 .font(.body)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)
