@@ -57,3 +57,19 @@ enum TaskTimeText {
         return AlarmText.time(item.effectiveTime(now: now, followsNextRing: followsNextRing) ?? first, digits: digits)
     }
 }
+
+extension Array where Element == TaskRecord {
+    /// Earliest due time first; tasks without a time keep their current order at the end.
+    func sortedByDueTime(on day: DayKey, provider: PrayerTimeProviding?, calendar: Calendar) -> [TaskRecord] {
+        var keyed: [(index: Int, task: TaskRecord, due: Date)] = []
+        for (index, task) in self.enumerated() {
+            let due: Date = task.dueDate(on: day, provider: provider, calendar: calendar) ?? Date.distantFuture
+            keyed.append((index: index, task: task, due: due))
+        }
+        keyed.sort { (a, b) -> Bool in
+            if a.due == b.due { return a.index < b.index }
+            return a.due < b.due
+        }
+        return keyed.map { $0.task }
+    }
+}

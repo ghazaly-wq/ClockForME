@@ -76,13 +76,10 @@ struct TasksView: View {
         let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
         let mainToday = todayTasks(.main, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
         let secondaryToday = todayTasks(.secondary, today: snapshot.today, doneToday: doneToday, doneEver: doneEver, calendar: calendar)
-        let list = sortedByTime(
-            (mainToday + secondaryToday).filter(filter.matches),
-            day: snapshot.today, provider: provider, calendar: calendar
-        )
-        let upcoming = (upcomingTasks(.main, today: snapshot.today) + upcomingTasks(.secondary, today: snapshot.today))
-            .filter(filter.matches)
-            .sorted { $0.startDay < $1.startDay }
+        let combined: [TaskRecord] = (mainToday + secondaryToday).filter(filter.matches)
+        let list: [TaskRecord] = combined.sortedByDueTime(on: snapshot.today, provider: provider, calendar: calendar)
+        let upcomingAll: [TaskRecord] = upcomingTasks(.main, today: snapshot.today) + upcomingTasks(.secondary, today: snapshot.today)
+        let upcoming: [TaskRecord] = upcomingAll.filter(filter.matches).sorted { $0.startDay < $1.startDay }
         let newKind: TaskKind = filter == .secondary ? .secondary : .main
 
         CurvedPage(title: "المهمات", scrollable: false, onAdd: { editor = .new(newKind) }) {
@@ -301,14 +298,6 @@ struct TasksView: View {
         case .main: return "مهمات اليوم الرئيسية"
         case .secondary: return "مهمات اليوم الفرعية"
         }
-    }
-
-    /// Earliest due time first; tasks without a time keep their order at the end.
-    private func sortedByTime(_ items: [TaskRecord], day: DayKey, provider: PrayerTimeProviding?, calendar: Calendar) -> [TaskRecord] {
-        items.enumerated()
-            .map { (index: $0.offset, task: $0.element, due: $0.element.dueDate(on: day, provider: provider, calendar: calendar) ?? .distantFuture) }
-            .sorted { $0.due == $1.due ? $0.index < $1.index : $0.due < $1.due }
-            .map { $0.task }
     }
 
     /// One-off tasks dated after today.

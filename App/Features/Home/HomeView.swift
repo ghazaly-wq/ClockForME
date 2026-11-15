@@ -39,13 +39,10 @@ struct HomeView: View {
         )
         let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
         let doneToday = Set(completions.filter { $0.day == snapshot.today }.map(\.taskID))
-        let mainToday = tasks.filter {
+        let scheduledMain: [TaskRecord] = tasks.filter {
             $0.kind == .main && $0.repetition != nil && $0.spec.isScheduled(on: snapshot.today, calendar: calendar)
         }
-        .enumerated()
-        .map { (index: $0.offset, task: $0.element, due: $0.element.dueDate(on: snapshot.today, provider: provider, calendar: calendar) ?? Date.distantFuture) }
-        .sorted { $0.due == $1.due ? $0.index < $1.index : $0.due < $1.due }
-        .map { $0.task }
+        let mainToday: [TaskRecord] = scheduledMain.sortedByDueTime(on: snapshot.today, provider: provider, calendar: calendar)
         let nextTask = nextTaskInfo(mainToday, doneToday: doneToday, today: snapshot.today, provider: provider, calendar: calendar)
         let upcomingAlarms = upcomingAlarmsToday(provider: provider, calendar: calendar)
 
