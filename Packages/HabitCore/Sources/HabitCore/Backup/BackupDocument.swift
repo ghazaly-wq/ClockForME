@@ -80,16 +80,21 @@ public struct BackupAlarm: Codable, Equatable, Sendable {
     public var extraPrayersData: Data?
     public var endDayISO: String?
     public var deliveryRaw: String?
+    /// JSON of `AlarmChallenge` (nil = no challenge). Absent in backups made before challenges existed.
+    public var challengeData: Data?
+    /// JSON of `StopDestination` (nil = this app). Absent in older backups.
+    public var destinationData: Data?
 
     public init(
         id: UUID, title: String, note: String, isEnabled: Bool, repetitionData: Data, timeData: Data,
         isMainTask: Bool, createdAt: Date, linkedPageID: UUID?, extraPrayersData: Data?, endDayISO: String?,
-        deliveryRaw: String?
+        deliveryRaw: String?, challengeData: Data? = nil, destinationData: Data? = nil
     ) {
         self.id = id; self.title = title; self.note = note; self.isEnabled = isEnabled
         self.repetitionData = repetitionData; self.timeData = timeData; self.isMainTask = isMainTask
         self.createdAt = createdAt; self.linkedPageID = linkedPageID; self.extraPrayersData = extraPrayersData
         self.endDayISO = endDayISO; self.deliveryRaw = deliveryRaw
+        self.challengeData = challengeData; self.destinationData = destinationData
     }
 }
 

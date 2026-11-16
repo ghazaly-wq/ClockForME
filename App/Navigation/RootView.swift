@@ -90,6 +90,77 @@ struct RootView: View {
         }
     }
 
+    // MARK: - Alarm stop: challenge and destination
+
+    /// The stop button of a challenge / destination alarm was pressed.
+    private func resolveStop(_ stop: PendingStop) {
+        router.pendingStop = nil
+        guard let alarmID = stop.alarmID, let alarm = fetchAlarm(alarmID), alarm.delivery == .alarm else {
+            openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
+            return
+        }
+        if let challenge = alarm.challenge {
+            let ledger = AlarmScheduler.challengeLedger()
+            if ledger.isCompleted(stop.occurrenceKey) {
+                // That ring's challenge is already done (a late alarm of the chain): just land on the usual page.
+                openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
+            } else {
+                let fire = ledger.entry(for: stop.occurrenceKey)?.fireDate ?? Date()
+                present(alarm: alarm, challenge: challenge, key: stop.occurrenceKey, fire: fire)
+            }
+            return
+        }
+        openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
+        if let destination = alarm.stopDestination, destination.isValid { open(destination) }
+    }
+
+    /// Opened the app by hand while a challenge alarm is still waiting for its challenge.
+    private func presentPendingChallenge() {
+        guard router.activeChallenge == nil, let entry = AlarmScheduler.challengeLedger().pending(now: Date()),
+              let alarm = fetchAlarm(entry.alarmID), alarm.delivery == .alarm, let challenge = alarm.challenge else { return }
+        present(alarm: alarm, challenge: challenge, key: entry.key, fire: entry.fireDate)
+    }
+
+    private func present(alarm: AlarmRecord, challenge: AlarmChallenge, key: String, fire: Date) {
+        router.activeChallenge = ActiveChallenge(
+            id: key, alarmID: alarm.id, title: alarm.title, challenge: challenge, destination: alarm.stopDestination,
+            expiresAt: max(fire.addingTimeInterval(ChallengeChain.window), Date().addingTimeInterval(60)),
+            showTasks: alarm.isMainTask, pageID: alarm.linkedPageID
+        )
+    }
+
+    private func challengeFinished(_ active: ActiveChallenge) {
+        AlarmScheduler.completeChallenge(occurrence: active.id)
+        router.activeChallenge = nil
+        openFallback(showTasks: active.showTasks, pageID: active.pageID)
+        if let destination = active.destination, destination.isValid { open(destination) }
+        Task { await AlarmActions.replan(container: AppEnvironment.shared.container) }
+    }
+
+    private func fetchAlarm(_ id: UUID) -> AlarmRecord? {
+        let descriptor = FetchDescriptor<AlarmRecord>(predicate: #Predicate { $0.id == id })
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    /// Where the stop button used to lead: the page of a custom-page alarm, the tasks, or the alarms.
+    private func openFallback(showTasks: Bool, pageID: UUID?) {
+        if let pageID {
+            router.openPageID = pageID
+            router.selectedTab = .pages
+        } else {
+            router.selectedTab = showTasks ? .tasks : .alarms
+        }
+    }
+
+    /// Leaves the app for the chosen website / app / shortcut (a short pause lets this app finish coming forward first).
+    private func open(_ destination: StopDestination) {
+        guard let url = destination.url else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            _ = await UIApplication.shared.open(url)
+        }
+    }
+
     private var headerMorphKey: String {
         router.selectedTab.rawValue + "|" + (headerConfigs[router.selectedTab]?.titleKey ?? "")
             + "|" + (headerConfigs[router.selectedTab]?.subtitle ?? "")
@@ -184,6 +255,19 @@ struct RootView: View {
             WidgetCenter.shared.reloadAllTimelines()
         }
         .onOpenURL { handle($0) }
+        // The stop button of a challenge / destination alarm, and a challenge still waiting when the app opens.
+        .onChange(of: router.pendingStop, initial: true) { _, stop in
+            if let stop { resolveStop(stop) }
+        }
+        .task { presentPendingChallenge() }
+        .fullScreenCover(item: $router.activeChallenge) { active in
+            ChallengeView(
+                active: active,
+                onFinished: { challengeFinished(active) },
+                onClose: { router.activeChallenge = nil }
+            )
+            .appRoot()
+        }
         // Catches achievements earned while the app was closed or from older history.
         .task(id: refreshTick) {
             let result = AchievementActions.syncFromStore(context: context, now: Date(), dayStartHour: dayStartHour)
@@ -192,6 +276,7 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 refreshTick += 1
+                presentPendingChallenge()
                 BackupService.runAutoBackupIfDue(context: context)
                 Task { await SignatureInfo.rescheduleReminder() }
             } else if phase == .background {

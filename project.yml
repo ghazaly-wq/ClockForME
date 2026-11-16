@@ -37,6 +37,7 @@ targets:
         NSSupportsLiveActivities: true
         NSAlarmKitUsageDescription: نجدول المنبهات اللي تضيفها عشان ترن في وقتها حتى لو الجوال صامت
         NSLocationWhenInUseUsageDescription: نستخدم موقعك مرة واحدة لحساب أوقات الصلاة
+        NSMotionUsageDescription: نحسب خطواتك لتحدي المشي اللي توقف فيه المنبه
         UIBackgroundModes: [fetch]
         BGTaskSchedulerPermittedIdentifiers: [com.ghazaly.habits.refresh]
         UIFileSharingEnabled: true

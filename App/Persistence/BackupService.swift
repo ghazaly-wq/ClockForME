@@ -62,7 +62,8 @@ enum BackupService {
             BackupAlarm(
                 id: a.id, title: a.title, note: a.note, isEnabled: a.isEnabled, repetitionData: a.repetitionData,
                 timeData: a.timeData, isMainTask: a.isMainTask, createdAt: a.createdAt, linkedPageID: a.linkedPageID,
-                extraPrayersData: a.extraPrayersData, endDayISO: a.endDayISO, deliveryRaw: a.deliveryRaw
+                extraPrayersData: a.extraPrayersData, endDayISO: a.endDayISO, deliveryRaw: a.deliveryRaw,
+                challengeData: a.challengeData, destinationData: a.destinationData
             )
         }
         let pages = try context.fetch(FetchDescriptor<PageRecord>()).map { (p: PageRecord) -> BackupPage in
@@ -135,6 +136,8 @@ enum BackupService {
             record.extraPrayersData = a.extraPrayersData
             record.endDayISO = a.endDayISO
             record.deliveryRaw = a.deliveryRaw
+            record.challengeData = a.challengeData
+            record.destinationData = a.destinationData
             context.insert(record)
         }
         for p in document.pages {

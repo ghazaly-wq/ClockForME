@@ -13,6 +13,28 @@ struct UnlockInfo: Identifiable {
     let achievements: [AchievementDef]
 }
 
+/// The stop button of a challenge / destination alarm was pressed (set by `AlarmStopIntent`).
+struct PendingStop: Equatable {
+    let alarmID: UUID?
+    let occurrenceKey: String
+    let showTasks: Bool
+    let pageID: UUID?
+}
+
+/// A challenge that has to be done now; shown full screen until it is completed.
+struct ActiveChallenge: Identifiable, Equatable {
+    /// The ring's key (`alarm.<id>.<yyyyMMddHHmm>`).
+    let id: String
+    let alarmID: UUID
+    let title: String
+    let challenge: AlarmChallenge
+    let destination: StopDestination?
+    /// After this moment the chain has stopped ringing and the screen can be closed without finishing.
+    let expiresAt: Date
+    let showTasks: Bool
+    let pageID: UUID?
+}
+
 enum AchievementsSegment: String, CaseIterable {
     case achievements, rewards, shop
 }
@@ -31,6 +53,10 @@ final class AppRouter {
     var achievementsSegment: AchievementsSegment = .achievements
     /// A custom page to open on the "صفحاتي" tab (set by alarms, tasks and links).
     var openPageID: UUID?
+    /// Set when an alarm's stop button was pressed and the app has to decide what to show (challenge, destination, page).
+    var pendingStop: PendingStop?
+    /// The challenge on screen right now, if any.
+    var activeChallenge: ActiveChallenge?
     private var pendingLevelUp: LevelUpInfo?
 
     func celebrate(_ outcome: CompletionOutcome) {

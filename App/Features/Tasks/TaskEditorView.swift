@@ -173,7 +173,8 @@ struct TaskEditorView: View {
         alarmEnabled = true
         alarmSchedule = PageSchedule(
             repetition: alarm.repetition, time: alarm.time, extraPrayers: alarm.extraPrayers,
-            endDay: alarm.endDay, delivery: alarm.delivery
+            endDay: alarm.endDay, delivery: alarm.delivery,
+            challenge: alarm.challenge, stopDestination: alarm.stopDestination
         )
     }
 
@@ -201,7 +202,9 @@ struct TaskEditorView: View {
 
         var rule = AlarmRule(
             title: title, repetition: repetition, time: alarmSchedule.time,
-            isMainTask: kind == .main, extraPrayers: alarmSchedule.extraPrayers, delivery: alarmSchedule.delivery
+            isMainTask: kind == .main, extraPrayers: alarmSchedule.extraPrayers, delivery: alarmSchedule.delivery,
+            challenge: alarmSchedule.challenge,
+            stopDestination: alarmSchedule.stopDestination?.isValid == true ? alarmSchedule.stopDestination : nil
         )
         if let existing {
             rule.id = existing.id
