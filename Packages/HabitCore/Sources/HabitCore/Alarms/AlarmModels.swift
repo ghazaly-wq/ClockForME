@@ -38,6 +38,10 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     public var endDay: DayKey?
     /// A ringing alarm (default) or just a notification.
     public var delivery: AlarmDelivery
+    /// What must be done before the alarm stops ringing; nil = a normal alarm.
+    public var challenge: AlarmChallenge?
+    /// Where the stop button leads instead of this app; nil = this app.
+    public var stopDestination: StopDestination?
 
     public init(
         id: UUID = UUID(),
@@ -50,7 +54,9 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         linkedPageID: UUID? = nil,
         extraPrayers: [Prayer] = [],
         endDay: DayKey? = nil,
-        delivery: AlarmDelivery = .alarm
+        delivery: AlarmDelivery = .alarm,
+        challenge: AlarmChallenge? = nil,
+        stopDestination: StopDestination? = nil
     ) {
         self.id = id
         self.title = title
@@ -63,6 +69,25 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         self.extraPrayers = extraPrayers
         self.endDay = endDay
         self.delivery = delivery
+        self.challenge = challenge
+        self.stopDestination = stopDestination
+    }
+
+    /// A ringing alarm that must be stopped with a challenge (a notification can't ask for one).
+    public var hasChallenge: Bool { delivery == .alarm && challenge != nil }
+
+    /// A challenge or a destination only makes sense for a ringing alarm.
+    public var usesStopOverride: Bool {
+        delivery == .alarm && (challenge != nil || stopDestination?.isValid == true)
+    }
+
+    /// Part of the alarm's fingerprint: changes when the challenge or the destination changes.
+    public var stopOverrideFingerprint: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let challengeText = challenge.flatMap { try? encoder.encode($0) }.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        let destinationText = stopDestination.flatMap { try? encoder.encode($0) }.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+        return challengeText + "|" + destinationText
     }
 
     /// Every prayer this alarm follows, the main one first. Empty for clock alarms.
@@ -72,7 +97,7 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, note, isEnabled, repetition, time, isMainTask, linkedPageID, extraPrayers, endDay, delivery
+        case id, title, note, isEnabled, repetition, time, isMainTask, linkedPageID, extraPrayers, endDay, delivery, challenge, stopDestination
     }
 
     public init(from decoder: Decoder) throws {
@@ -88,5 +113,7 @@ public struct AlarmRule: Codable, Equatable, Identifiable, Sendable {
         extraPrayers = try c.decodeIfPresent([Prayer].self, forKey: .extraPrayers) ?? []
         endDay = try c.decodeIfPresent(DayKey.self, forKey: .endDay)
         delivery = try c.decodeIfPresent(AlarmDelivery.self, forKey: .delivery) ?? .alarm
+        challenge = try c.decodeIfPresent(AlarmChallenge.self, forKey: .challenge)
+        stopDestination = try c.decodeIfPresent(StopDestination.self, forKey: .stopDestination)
     }
 }

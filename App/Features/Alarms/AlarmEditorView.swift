@@ -43,6 +43,8 @@ struct AlarmEditorView: View {
     @State private var monthDays: Set<Int> = [1]
     @State private var isMainTask = false
     @State private var delivery: AlarmDelivery = .alarm
+    @State private var challenge: AlarmChallenge?
+    @State private var stopDestination: StopDestination?
     @State private var showUnlinkDialog = false
 
     init(target: AlarmEditorTarget) {
@@ -56,6 +58,8 @@ struct AlarmEditorView: View {
         _note = State(initialValue: alarm.note)
         _isMainTask = State(initialValue: alarm.isMainTask)
         _delivery = State(initialValue: alarm.delivery)
+        _challenge = State(initialValue: alarm.challenge)
+        _stopDestination = State(initialValue: alarm.stopDestination)
         switch alarm.time {
         case let .clock(hour, minute):
             _timeKind = State(initialValue: .clock)
@@ -165,6 +169,7 @@ struct AlarmEditorView: View {
                 }
 
                 DeliveryPicker(delivery: $delivery)
+                ChallengeSection(challenge: $challenge, destination: $stopDestination, delivery: delivery)
 
                 Section {
                     TextField("اسم التنبيه", text: $title)
@@ -311,7 +316,9 @@ struct AlarmEditorView: View {
             isMainTask: isMainTask,
             extraPrayers: timeKind == .prayer ? Array(orderedPrayers.dropFirst()) : [],
             endDay: (repeatKind != .once && hasEnd) ? DayKey(date: endDate, calendar: calendar) : nil,
-            delivery: delivery
+            delivery: delivery,
+            challenge: challenge,
+            stopDestination: stopDestination?.isValid == true ? stopDestination : nil
         )
 
         let record: AlarmRecord

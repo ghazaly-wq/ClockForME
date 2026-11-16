@@ -120,6 +120,7 @@ struct ScheduleFields: View {
         }
 
         DeliveryPicker(delivery: $schedule.delivery)
+        ChallengeSection(challenge: $schedule.challenge, destination: $schedule.stopDestination, delivery: schedule.delivery)
 
         if !timeOnly {
             repetitionSections

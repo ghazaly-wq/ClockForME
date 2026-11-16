@@ -158,7 +158,7 @@ public enum PageLogic {
         return AlarmRule(
             id: existingID, title: page.name, repetition: schedule.repetition, time: schedule.time,
             isMainTask: false, linkedPageID: page.id, extraPrayers: schedule.extraPrayers, endDay: schedule.endDay,
-            delivery: schedule.delivery
+            delivery: schedule.delivery, challenge: schedule.challenge, stopDestination: schedule.stopDestination
         )
     }
 

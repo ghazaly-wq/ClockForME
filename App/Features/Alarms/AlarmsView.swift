@@ -162,6 +162,22 @@ struct AlarmsView: View {
                                 .padding(.vertical, 3)
                                 .overlay(Capsule().stroke(Theme.primaryStrong, lineWidth: 1))
                         }
+                        if alarm.delivery == .alarm, alarm.challenge != nil {
+                            Label("تحدي", systemImage: "figure.walk")
+                                .font(.caption2.bold())
+                                .foregroundStyle(Theme.primaryStrong)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .overlay(Capsule().stroke(Theme.primaryStrong, lineWidth: 1))
+                        }
+                        if alarm.delivery == .alarm, alarm.stopDestination != nil {
+                            Label("وجهة", systemImage: "arrow.up.forward.app")
+                                .font(.caption2.bold())
+                                .foregroundStyle(Theme.primaryStrong)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .overlay(Capsule().stroke(Theme.primaryStrong, lineWidth: 1))
+                        }
                         if alarm.delivery == .notification {
                             Label("إشعار فقط", systemImage: "bell")
                                 .font(.caption2.bold())
