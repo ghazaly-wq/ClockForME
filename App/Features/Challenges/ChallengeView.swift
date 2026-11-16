@@ -180,6 +180,8 @@ private struct StepsChallengeView: View {
     @Environment(\.digitStyle) private var digits
     @State private var steps = 0
     @State private var pedometer = CMPedometer()
+    @State private var startDate = Date()
+    @State private var secondsWaiting = 0
     @State private var finished = false
 
     var body: some View {
@@ -199,33 +201,45 @@ private struct StepsChallengeView: View {
                 .multilineTextAlignment(.center)
             ProgressView(value: Double(min(steps, target)), total: Double(target))
                 .tint(Theme.primaryStrong)
+            if steps == 0, secondsWaiting >= 12 {
+                Text("ما وصلتنا خطوات بعد. تأكد إن إذن «الحركة واللياقة» مفعّل للتطبيق في إعدادات الجوال، وامشِ والجوال في جيبك أو يدك.")
+                    .font(.footnote)
+                    .foregroundStyle(Theme.danger)
+                    .multilineTextAlignment(.center)
+            }
         }
-        .task { start() }
-        .onDisappear { pedometer.stopUpdates() }
+        .task { await countSteps() }
     }
 
-    private func start() {
-        let status = CMPedometer.authorizationStatus()
-        guard CMPedometer.isStepCountingAvailable(), status != .denied, status != .restricted else {
+    /// Asks the pedometer for the steps since the screen opened, again and again. Plain queries are used on purpose:
+    /// they also trigger the motion permission prompt, and keep working after it is answered (live updates stop
+    /// for good if the first call fails because the permission isn't granted yet).
+    private func countSteps() async {
+        guard CMPedometer.isStepCountingAvailable() else {
             onUnavailable()
             return
         }
-        let startDate = Date()
-        pedometer.startUpdates(from: startDate) { data, error in
-            DispatchQueue.main.async {
-                if error != nil, data == nil, steps == 0 {
-                    // Typically "motion permission refused" the first time it is asked.
-                    if CMPedometer.authorizationStatus() == .denied { onUnavailable() }
-                    return
-                }
-                guard let data else { return }
-                steps = data.numberOfSteps.intValue
-                if steps >= target, !finished {
-                    finished = true
-                    pedometer.stopUpdates()
-                    onSuccess()
+        startDate = Date()
+        let from = startDate
+        while !Task.isCancelled, !finished {
+            let status = CMPedometer.authorizationStatus()
+            if status == .denied || status == .restricted {
+                onUnavailable()
+                return
+            }
+            let count: Int? = await withCheckedContinuation { continuation in
+                pedometer.queryPedometerData(from: from, to: Date()) { data, _ in
+                    continuation.resume(returning: data?.numberOfSteps.intValue)
                 }
             }
+            if let count { steps = count }
+            if steps >= target, !finished {
+                finished = true
+                onSuccess()
+                return
+            }
+            try? await Task.sleep(for: .seconds(1.5))
+            secondsWaiting += 2
         }
     }
 }

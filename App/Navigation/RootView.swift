@@ -92,33 +92,34 @@ struct RootView: View {
 
     // MARK: - Alarm stop: challenge and destination
 
-    /// The stop button of a challenge / destination alarm was pressed.
-    private func resolveStop(_ stop: PendingStop) {
-        router.pendingStop = nil
-        guard let alarmID = stop.alarmID, let alarm = fetchAlarm(alarmID), alarm.delivery == .alarm else {
-            openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
-            return
-        }
-        if let challenge = alarm.challenge {
-            let ledger = AlarmScheduler.challengeLedger()
-            if ledger.isCompleted(stop.occurrenceKey) {
-                // That ring's challenge is already done (a late alarm of the chain): just land on the usual page.
-                openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
-            } else {
-                let fire = ledger.entry(for: stop.occurrenceKey)?.fireDate ?? Date()
-                present(alarm: alarm, challenge: challenge, key: stop.occurrenceKey, fire: fire)
+    /// The stop button of an alarm opened the app (the intent already moved to the usual page). If that ring has a
+    /// challenge, it comes first; if it only has a destination, we leave for it.
+    private func handleAlarmStop() {
+        router.alarmStoppedAt = nil
+        let now = Date()
+        let pending = AlarmScheduler.challengeLedger().pendingEntries(now: now)
+        for entry in pending {
+            guard let alarm = fetchAlarm(entry.alarmID), alarm.delivery == .alarm else { continue }
+            if let challenge = alarm.challenge {
+                present(alarm: alarm, challenge: challenge, key: entry.key, fire: entry.fireDate)
+                return
             }
-            return
+            if let destination = alarm.stopDestination, destination.isValid {
+                AlarmScheduler.completeChallenge(occurrence: entry.key)
+                open(destination)
+                return
+            }
         }
-        openFallback(showTasks: stop.showTasks, pageID: stop.pageID)
-        if let destination = alarm.stopDestination, destination.isValid { open(destination) }
     }
 
     /// Opened the app by hand while a challenge alarm is still waiting for its challenge.
     private func presentPendingChallenge() {
-        guard router.activeChallenge == nil, let entry = AlarmScheduler.challengeLedger().pending(now: Date()),
-              let alarm = fetchAlarm(entry.alarmID), alarm.delivery == .alarm, let challenge = alarm.challenge else { return }
-        present(alarm: alarm, challenge: challenge, key: entry.key, fire: entry.fireDate)
+        guard router.activeChallenge == nil else { return }
+        for entry in AlarmScheduler.challengeLedger().pendingEntries(now: Date()) {
+            guard let alarm = fetchAlarm(entry.alarmID), alarm.delivery == .alarm, let challenge = alarm.challenge else { continue }
+            present(alarm: alarm, challenge: challenge, key: entry.key, fire: entry.fireDate)
+            return
+        }
     }
 
     private func present(alarm: AlarmRecord, challenge: AlarmChallenge, key: String, fire: Date) {
@@ -256,8 +257,8 @@ struct RootView: View {
         }
         .onOpenURL { handle($0) }
         // The stop button of a challenge / destination alarm, and a challenge still waiting when the app opens.
-        .onChange(of: router.pendingStop, initial: true) { _, stop in
-            if let stop { resolveStop(stop) }
+        .onChange(of: router.alarmStoppedAt, initial: true) { _, stoppedAt in
+            if stoppedAt != nil { handleAlarmStop() }
         }
         .task { presentPendingChallenge() }
         .fullScreenCover(item: $router.activeChallenge) { active in
