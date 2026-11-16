@@ -134,6 +134,16 @@ final class ChallengeTests: XCTestCase {
         XCTAssertNil(ledger.pending(now: fire.addingTimeInterval(ChallengeChain.window)))
     }
 
+    func testPendingEntriesAreListedLatestFirst() {
+        let alarm = UUID()
+        let first = Date(timeIntervalSince1970: 2_000_000)
+        let second = first.addingTimeInterval(120)
+        var ledger = ChallengeLedger()
+        ledger.reconcile(planned: [entry(alarm, first), entry(alarm, second)], now: first.addingTimeInterval(-60))
+        XCTAssertEqual(ledger.pendingEntries(now: second.addingTimeInterval(1)).map(\.fireDate), [second, first])
+        XCTAssertEqual(ledger.pending(now: second.addingTimeInterval(1))?.fireDate, second)
+    }
+
     func testLedgerCompletionClearsPending() {
         let alarm = UUID()
         let fire = Date(timeIntervalSince1970: 2_000_000)

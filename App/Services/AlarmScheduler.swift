@@ -35,48 +35,8 @@ struct OpenHabitsIntent: LiveActivityIntent {
             } else {
                 router.selectedTab = tasks ? .tasks : .alarms
             }
-        }
-        return .result()
-    }
-}
-
-/// Runs when the stop button of an alarm that has a challenge or a destination is pressed. It opens the app
-/// and hands over which ring it was; the app then shows the challenge, opens the destination, or (when the
-/// ring is already done) just lands on the usual page.
-struct AlarmStopIntent: LiveActivityIntent {
-    static var title: LocalizedStringResource = "فتح التطبيق"
-    static var openAppWhenRun: Bool = true
-
-    @Parameter(title: "alarm")
-    var alarmID: String
-
-    @Parameter(title: "occurrence")
-    var occurrenceKey: String
-
-    @Parameter(title: "tasks")
-    var showTasks: Bool
-
-    @Parameter(title: "page")
-    var pageID: String
-
-    init() {}
-
-    init(alarmID: String, occurrenceKey: String, showTasks: Bool, pageID: String = "") {
-        self.alarmID = alarmID
-        self.occurrenceKey = occurrenceKey
-        self.showTasks = showTasks
-        self.pageID = pageID
-    }
-
-    func perform() async throws -> some IntentResult {
-        let stop = PendingStop(
-            alarmID: UUID(uuidString: alarmID),
-            occurrenceKey: occurrenceKey,
-            showTasks: showTasks,
-            pageID: UUID(uuidString: pageID)
-        )
-        await MainActor.run {
-            AppEnvironment.shared.router.pendingStop = stop
+            // The app then checks whether this ring has a challenge or a destination waiting.
+            router.alarmStoppedAt = Date()
         }
         return .result()
     }
@@ -190,7 +150,7 @@ enum AlarmScheduler {
         var plannedEntries: [ChallengeLedger.Entry] = []
         var perRule: [UUID: Int] = [:]
         for item in plan {
-            guard let rule = rules[item.alarmID], rule.hasChallenge,
+            guard let rule = rules[item.alarmID], rule.usesStopOverride,
                   perRule[rule.id, default: 0] < ChallengeChain.plannedOccurrences else { continue }
             perRule[rule.id, default: 0] += 1
             plannedEntries.append(ChallengeLedger.Entry(key: item.identifier, alarmID: rule.id, fireDate: item.fireDate))
@@ -238,17 +198,70 @@ enum AlarmScheduler {
         let existingIDs = Set(existing.map(\.id))
         let missing = wanted.filter { !existingIDs.contains($0.key) }
             .sorted { (tier($0.value), $0.value.fireDate) < (tier($1.value), $1.value.fireDate) }
-        for (id, entry) in missing {
-            do {
-                _ = try await manager.schedule(
-                    id: id,
-                    configuration: configuration(for: entry.rule, fireDate: entry.fireDate, occurrence: entry.occurrence)
-                )
-            } catch {
-                // Over the system's limit (or a bad date): keep what we have, the nearest ones are in.
-                if case AlarmManager.AlarmError.maximumLimitReached = error { break }
+        // When the system's limit is hit, far-away rings are dropped to make room for the near ones (replan brings them back later).
+        var victims = existing
+            .filter { $0.state == .scheduled }
+            .compactMap { alarm -> (id: UUID, date: Date)? in
+                guard let entry = wanted[alarm.id], tier(entry) == 1 else { return nil }
+                return (alarm.id, entry.fireDate)
+            }
+            .sorted { $0.date > $1.date }
+        var report = AlarmScheduleReport(
+            date: now, wanted: wanted.count, alreadyScheduled: wanted.keys.filter { existingIDs.contains($0) }.count,
+            chainWanted: wanted.values.filter(\.isChain).count
+        )
+        scheduling: for (id, entry) in missing {
+            var classic = false
+            var freed = 0
+            while true {
+                do {
+                    _ = try await manager.schedule(
+                        id: id, configuration: configuration(for: entry.rule, fireDate: entry.fireDate, classic: classic)
+                    )
+                    report.scheduledNow += 1
+                    if entry.isChain { report.chainScheduledNow += 1 }
+                    break
+                } catch {
+                    if case AlarmManager.AlarmError.maximumLimitReached = error {
+                        if tier(entry) == 0, freed < 20, let victim = victims.first {
+                            victims.removeFirst()
+                            try? manager.cancel(id: victim.id)
+                            freed += 1
+                            report.droppedForRoom += 1
+                            continue
+                        }
+                        report.limitReached = true
+                        break scheduling
+                    }
+                    report.failures.append(String(describing: error))
+                    if entry.rule.hasChallenge, !classic {
+                        // The system refused the challenge version: ring as a plain alarm rather than not at all.
+                        classic = true
+                        report.fellBackToClassic += 1
+                        continue
+                    }
+                    break
+                }
             }
         }
+        saveReport(report)
+    }
+
+    // MARK: - What happened (for the diagnostics screen)
+
+    private static let reportKey = "alarmScheduleReport"
+
+    private static func saveReport(_ report: AlarmScheduleReport) {
+        if let data = try? JSONEncoder().encode(report) { UserDefaults.standard.set(data, forKey: reportKey) }
+    }
+
+    static func lastReport() -> AlarmScheduleReport? {
+        UserDefaults.standard.data(forKey: reportKey).flatMap { try? JSONDecoder().decode(AlarmScheduleReport.self, from: $0) }
+    }
+
+    /// Which AlarmKit alarms belong to a challenge ring (the main ring or one of its extra rings).
+    static func occurrenceOwner(of kitID: UUID) -> String? {
+        loadOccurrenceMap()[kitID.uuidString]
     }
 
     // MARK: - Building one alarm
@@ -261,13 +274,16 @@ enum AlarmScheduler {
         let isChain: Bool
     }
 
+    /// `classic` builds the plain alarm (with snooze) even for a challenge alarm: the fallback when the system
+    /// refuses the challenge version, so the alarm always rings.
     private static func configuration(
-        for rule: AlarmRule, fireDate: Date, occurrence: String?
+        for rule: AlarmRule, fireDate: Date, classic: Bool = false
     ) -> AlarmManager.AlarmConfiguration<HabitAlarmMetadata> {
         let title = LocalizedStringResource(stringLiteral: rule.title)
         // A challenge alarm has no snooze: the chain rings again every minute until the challenge is done.
+        let noSnooze = rule.hasChallenge && !classic
         let snooze = AlarmButton(text: "تأجيل 10 دقائق", textColor: .white, systemImageName: "bell.slash")
-        let alert = rule.hasChallenge
+        let alert = noSnooze
             ? AlarmPresentation.Alert(title: title, secondaryButton: nil, secondaryButtonBehavior: nil)
             : AlarmPresentation.Alert(title: title, secondaryButton: snooze, secondaryButtonBehavior: .countdown)
         // Shown while a snoozed alarm counts down.
@@ -284,20 +300,11 @@ enum AlarmScheduler {
             metadata: HabitAlarmMetadata(alarmID: rule.id.uuidString),
             tintColor: Color(red: 0.07, green: 0.66, blue: 0.42)
         )
-        let stopIntent: any LiveActivityIntent
-        if rule.usesStopOverride, let occurrence {
-            stopIntent = AlarmStopIntent(
-                alarmID: rule.id.uuidString, occurrenceKey: occurrence,
-                showTasks: rule.isMainTask, pageID: rule.linkedPageID?.uuidString ?? ""
-            )
-        } else {
-            stopIntent = OpenHabitsIntent(showTasks: rule.isMainTask, pageID: rule.linkedPageID?.uuidString ?? "")
-        }
         return AlarmManager.AlarmConfiguration(
-            countdownDuration: rule.hasChallenge ? nil : Alarm.CountdownDuration(preAlert: nil, postAlert: snoozeSeconds),
+            countdownDuration: noSnooze ? nil : Alarm.CountdownDuration(preAlert: nil, postAlert: snoozeSeconds),
             schedule: .fixed(fireDate),
             attributes: attributes,
-            stopIntent: stopIntent,
+            stopIntent: OpenHabitsIntent(showTasks: rule.isMainTask, pageID: rule.linkedPageID?.uuidString ?? ""),
             secondaryIntent: nil,
             sound: AlarmSoundStore.alertSound
         )
@@ -316,4 +323,18 @@ enum AlarmScheduler {
         return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
                            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
     }
+}
+
+/// What the last re-plan did, shown in the diagnostics screen so a problem can be seen instead of guessed.
+struct AlarmScheduleReport: Codable {
+    var date: Date
+    var wanted: Int
+    var alreadyScheduled: Int
+    var chainWanted: Int
+    var scheduledNow = 0
+    var chainScheduledNow = 0
+    var droppedForRoom = 0
+    var fellBackToClassic = 0
+    var limitReached = false
+    var failures: [String] = []
 }

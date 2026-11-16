@@ -55,6 +55,7 @@ struct SettingsView: View {
 
                 Section("المنبه") {
                     NavigationLink("صوت المنبه") { AlarmSoundView() }
+                    NavigationLink("تشخيص المنبهات") { AlarmDiagnosticsView() }
                 }
 
                 Section {

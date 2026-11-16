@@ -304,10 +304,13 @@ public struct ChallengeLedger: Codable, Equatable, Sendable {
         completed = completed.filter { $0.value >= cutoff }
     }
 
-    /// The latest ring that has happened, is still inside its window and is not completed.
-    public func pending(now: Date) -> Entry? {
+    /// Rings that have happened, are still inside their window and are not completed, latest first.
+    public func pendingEntries(now: Date) -> [Entry] {
         entries
             .filter { $0.fireDate <= now && now < $0.fireDate.addingTimeInterval(ChallengeChain.window) && !isCompleted($0.key) }
-            .max { $0.fireDate < $1.fireDate }
+            .sorted { $0.fireDate > $1.fireDate }
     }
+
+    /// The latest of them.
+    public func pending(now: Date) -> Entry? { pendingEntries(now: now).first }
 }

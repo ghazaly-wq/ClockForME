@@ -13,14 +13,6 @@ struct UnlockInfo: Identifiable {
     let achievements: [AchievementDef]
 }
 
-/// The stop button of a challenge / destination alarm was pressed (set by `AlarmStopIntent`).
-struct PendingStop: Equatable {
-    let alarmID: UUID?
-    let occurrenceKey: String
-    let showTasks: Bool
-    let pageID: UUID?
-}
-
 /// A challenge that has to be done now; shown full screen until it is completed.
 struct ActiveChallenge: Identifiable, Equatable {
     /// The ring's key (`alarm.<id>.<yyyyMMddHHmm>`).
@@ -53,8 +45,9 @@ final class AppRouter {
     var achievementsSegment: AchievementsSegment = .achievements
     /// A custom page to open on the "صفحاتي" tab (set by alarms, tasks and links).
     var openPageID: UUID?
-    /// Set when an alarm's stop button was pressed and the app has to decide what to show (challenge, destination, page).
-    var pendingStop: PendingStop?
+    /// Set when an alarm's stop button opened the app (`OpenHabitsIntent`); the app then checks whether that ring
+    /// has a challenge or a destination waiting.
+    var alarmStoppedAt: Date?
     /// The challenge on screen right now, if any.
     var activeChallenge: ActiveChallenge?
     private var pendingLevelUp: LevelUpInfo?
