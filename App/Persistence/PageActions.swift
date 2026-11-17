@@ -245,6 +245,18 @@ enum PageActions {
         return TaskActions.toggle(task, on: today, tasks: tasks, completions: completions, context: context, now: now, dayStartHour: dayStartHour)
     }
 
+    /// What pressing "finish session" did to the page's linked main task, for the message shown to the user.
+    enum FinishNote { case completed, alreadyDone, noLinkedTask }
+
+    static func finishNote(pageID: UUID, tasks: [TaskRecord], completions: [CompletionRecord], now: Date, dayStartHour: Int) -> FinishNote {
+        let calendar = Calendar.app
+        let today = DayKey(date: now, calendar: calendar, dayStartHour: dayStartHour)
+        guard let task = tasks.first(where: {
+            $0.pageID == pageID && $0.kind == .main && $0.spec.isScheduled(on: today, calendar: calendar)
+        }) else { return .noLinkedTask }
+        return completions.contains(where: { $0.taskID == task.id && $0.day == today }) ? .alreadyDone : .completed
+    }
+
     /// Quick-creates a secondary task (button action "إضافة مهمة فرعية").
     static func addSecondaryTask(title: String, tasks: [TaskRecord], context: ModelContext, today: DayKey) {
         let order = (tasks.map(\.sortOrder).max() ?? -1) + 1
