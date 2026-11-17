@@ -212,6 +212,15 @@ struct NewPageSheet: View {
         NavigationStack {
             List {
                 Section {
+                    NavigationLink {
+                        AIPageBuilderView { definition in create(definition) }
+                    } label: {
+                        Label("ابنِ صفحة بالذكاء الاصطناعي", systemImage: "sparkles")
+                            .foregroundStyle(Theme.textPrimary)
+                            .frame(minHeight: 44, alignment: .leading)
+                    }
+                }
+                Section {
                     Button { create(PageTemplates.blank()) } label: {
                         Label("صفحة فارغة", systemImage: "square.dashed")
                             .foregroundStyle(Theme.textPrimary)
