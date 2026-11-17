@@ -41,6 +41,7 @@ struct BlockUseView: View {
         case .image: imageBlock
         case .link: linkBlock
         case .button: buttonBlock
+        case .ai: card { AIBlockView(block: block, page: page, runtime: runtime) }
         }
     }
 

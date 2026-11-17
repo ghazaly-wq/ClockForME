@@ -190,6 +190,23 @@ struct BlockConfigView: View {
             linkSection(b)
         case .button:
             buttonSection(b)
+        case .ai:
+            Section {
+                TextField("الاسم", text: b.title)
+            }
+            Section {
+                TextField("مثلاً: أنت مدرب لياقة. جاوب باختصار وبالعربي.", text: b.text, axis: .vertical)
+                    .lineLimit(3...12)
+            } header: {
+                Text("تعليمات النظام")
+            } footer: {
+                Text("هذي التعليمات تحدد شخصية المساعد وكيف يجاوب. تنرسل مع كل سؤال. تحتاج مفتاح ذكاء اصطناعي من الإعدادات.")
+            }
+            Section {
+                Toggle("أرسل بيانات الصفحة للمساعد", isOn: b.aiIncludesPageData)
+            } footer: {
+                Text("لو فعّلته، القيم اللي كتبتها في الصفحة (مثل الوزن والعدّات) تنرسل للمزوّد مع سؤالك عشان يعرف وضعك.")
+            }
         }
     }
 
