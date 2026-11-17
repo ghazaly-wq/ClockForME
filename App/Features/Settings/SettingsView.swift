@@ -100,6 +100,14 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    NavigationLink("مفاتيح الذكاء الاصطناعي") { AIKeysView() }
+                } header: {
+                    Text("الذكاء الاصطناعي")
+                } footer: {
+                    Text("تضيف مفاتيحك الخاصة من Google AI أو ChatGPT أو Kimi أو Qwen أو DeepSeek، وميزات الذكاء الاصطناعي الجاية تستخدمها.")
+                }
+
+                Section {
                     Toggle("المؤثرات الصوتية", isOn: $soundEffectsEnabled)
                 } header: {
                     Text("الأصوات")

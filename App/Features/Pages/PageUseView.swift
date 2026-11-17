@@ -18,6 +18,7 @@ struct PageUseView: View {
     @Query private var alarms: [AlarmRecord]
     @State private var runtime: PageRuntime
     @State private var savedFlash = false
+    @State private var finishNote: String?
 
     init(page: PageDefinition, tab: PageTab, sessionRecords: [PageSessionRecord]) {
         self.page = page
@@ -54,6 +55,18 @@ struct PageUseView: View {
             .padding(.bottom, Metrics.homeRingDiameter / 2 + 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .overlay(alignment: .bottom) {
+            if let finishNote {
+                Text(finishNote)
+                    .font(.footnote.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.25), value: finishNote)
         .onChange(of: runtime.session) { _, newValue in
             PageActions.upsert(newValue, records: sessionRecords, context: context)
         }
@@ -140,10 +153,24 @@ struct PageUseView: View {
         if session.finishedAt == nil { session.finishedAt = now }
         runtime.session = session
         PageActions.upsert(session, records: sessionRecords, context: context)
+        let note = PageActions.finishNote(pageID: page.id, tasks: tasks, completions: completions, now: now, dayStartHour: dayStartHour)
+        switch note {
+        case .completed: showFinishNote("انحفظت الجلسة وتمّت المهمة ✓")
+        case .alreadyDone: showFinishNote("انحفظت الجلسة. المهمة مكتملة من قبل.")
+        case .noLinkedTask: showFinishNote("انحفظت الجلسة. ما فيه مهمة رئيسية مربوطة بالصفحة اليوم.")
+        }
         if let outcome = PageActions.completeLinkedTask(
             pageID: page.id, tasks: tasks, completions: completions, context: context, now: now, dayStartHour: dayStartHour
         ) {
             router.celebrate(outcome)
+        }
+    }
+
+    private func showFinishNote(_ text: String) {
+        finishNote = text
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if finishNote == text { finishNote = nil }
         }
     }
 
