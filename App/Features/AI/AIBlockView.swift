@@ -59,9 +59,10 @@ struct AIBlockView: View {
     private var systemPrompt: String {
         var text = block.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if block.aiIncludesPageData {
-            let data = AIPageContext.summary(blocks: page.allBlocks, session: runtime.session)
+            let tab = page.tabs.first { $0.id == runtime.session.tabID } ?? page.tabs.first
+            let data = AIPageContext.summary(blocks: tab?.blocks ?? [], session: runtime.session)
             if !data.isEmpty {
-                text += (text.isEmpty ? "" : "\n\n") + "البيانات اللي كتبها المستخدم في الصفحة الحين:\n" + data
+                text += (text.isEmpty ? "" : "\n\n") + "محتوى الصفحة الحين (الأسماء بين [ ] والقيم اللي كتبها المستخدم تحتها):\n" + data
             }
         }
         return text
