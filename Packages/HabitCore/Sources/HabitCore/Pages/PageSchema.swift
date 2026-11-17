@@ -5,7 +5,7 @@ public let pageSchemaVersion = 1
 
 public enum BlockKind: String, Codable, CaseIterable, Sendable {
     case heading, text, container, textField, number, sets, counter, checkbox, checklist, choice
-    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button
+    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button, ai
 
     /// Arabic name shown in the builder.
     public var arabicName: String {
@@ -31,6 +31,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .image: return "صورة"
         case .link: return "رابط"
         case .button: return "زر"
+        case .ai: return "مساعد ذكي"
         }
     }
 
@@ -57,6 +58,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .image: return "photo"
         case .link: return "link"
         case .button: return "button.horizontal"
+        case .ai: return "sparkles"
         }
     }
 
@@ -93,7 +95,8 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
             ("الإدخال", [.textField, .number, .sets, .counter, .checkbox, .checklist, .choice, .rating, .dateTime]),
             ("الوقت", [.timer, .stopwatch]),
             ("العرض", [.progress, .chart, .history]),
-            ("الإجراءات", [.button])
+            ("الإجراءات", [.button]),
+            ("الذكاء", [.ai])
         ]
     }
 }
@@ -181,6 +184,8 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
     public var imageFile: String
     public var collapsed: Bool
     public var children: [Block]
+    /// AI block: also send the values typed on this page to the AI.
+    public var aiIncludesPageData: Bool
 
     public init(
         id: UUID = UUID(), kind: BlockKind, title: String = "", text: String = "", unit: String = "",
@@ -188,7 +193,7 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         target: Double? = nil, options: [String] = [], multiSelect: Bool = false, columns: [String] = [],
         maxRating: Int = 5, seconds: Int = 90, headingSize: HeadingSize = .medium, sourceIDs: [UUID] = [],
         metric: ChartMetric = .value, action: ButtonAction? = nil, linkURL: String = "", linkPageID: UUID? = nil,
-        imageFile: String = "", collapsed: Bool = false, children: [Block] = []
+        imageFile: String = "", collapsed: Bool = false, children: [Block] = [], aiIncludesPageData: Bool = false
     ) {
         self.id = id; self.kind = kind; self.title = title; self.text = text; self.unit = unit
         self.allowDecimal = allowDecimal; self.multiline = multiline; self.showLast = showLast; self.step = step
@@ -196,12 +201,13 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         self.maxRating = maxRating; self.seconds = seconds; self.headingSize = headingSize; self.sourceIDs = sourceIDs
         self.metric = metric; self.action = action; self.linkURL = linkURL; self.linkPageID = linkPageID
         self.imageFile = imageFile; self.collapsed = collapsed; self.children = children
+        self.aiIncludesPageData = aiIncludesPageData
     }
 
     enum CodingKeys: String, CodingKey {
         case id, kind, title, text, unit, allowDecimal, multiline, showLast, step, target, options, multiSelect
         case columns, maxRating, seconds, headingSize, sourceIDs, metric, action, linkURL, linkPageID, imageFile
-        case collapsed, children
+        case collapsed, children, aiIncludesPageData
     }
 
     public init(from decoder: Decoder) throws {
@@ -230,6 +236,7 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         imageFile = try c.decodeIfPresent(String.self, forKey: .imageFile) ?? ""
         collapsed = try c.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false
         children = try c.decodeIfPresent([Block].self, forKey: .children) ?? []
+        aiIncludesPageData = try c.decodeIfPresent(Bool.self, forKey: .aiIncludesPageData) ?? false
     }
 
     /// A new block of a kind with sensible Arabic defaults.
@@ -257,6 +264,7 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         case .image: b.title = "صورة"
         case .link: b.title = "رابط"
         case .button: b.title = "إنهاء الجلسة"; b.action = .finishSession
+        case .ai: b.title = "اسأل المساعد"
         }
         return b
     }
