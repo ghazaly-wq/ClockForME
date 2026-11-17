@@ -34,7 +34,13 @@ struct RootView: View {
     /// Anything that should make the notification plan be rebuilt.
     private var replanKey: String {
         let alarmPart = alarms.map(\.fingerprint).sorted().joined(separator: ";")
-        return "\(alarmPart)#\(hasLocation)#\(latitude)#\(longitude)#\(alarmSound)#\(refreshTick)"
+        // Finishing (or un-finishing) a task changes whether its alarm should still ring that day. Only recent days
+        // matter, so old history doesn't make this key expensive.
+        let cutoff = DayKey(date: Date(), calendar: Calendar.app, dayStartHour: dayStartHour)
+            .adding(days: -2, calendar: Calendar.app)?.isoString ?? ""
+        let donePart = completions.filter { $0.dayISO >= cutoff }
+            .map { "\($0.taskID.uuidString)\($0.dayISO)" }.sorted().joined(separator: ",")
+        return "\(alarmPart)#\(hasLocation)#\(latitude)#\(longitude)#\(alarmSound)#\(refreshTick)#\(donePart)"
     }
 
     /// Anything that changes what the widgets and the Live Activity show.

@@ -55,15 +55,24 @@ public enum NotificationPlanner {
         }
     }
 
+    /// Identifies "this alarm on this day" for `plan(... skipping:)`.
+    public static func doneKey(alarmID: UUID, day: DayKey) -> String {
+        "\(alarmID.uuidString)|\(day.isoString)"
+    }
+
     /// The next notifications to schedule, soonest first: enabled alarms within
     /// `days` days from `now`, capped at `limit`.
+    ///
+    /// `skipping` holds `doneKey`s of alarm/day pairs whose linked task is already done, so that day's rings are
+    /// left out (a task you finished early shouldn't ring later).
     public static func plan(
         alarms: [AlarmRule],
         from now: Date,
         days: Int = defaultHorizonDays,
         limit: Int = defaultLimit,
         provider: PrayerTimeProviding?,
-        calendar: Calendar
+        calendar: Calendar,
+        skipping: Set<String> = []
     ) -> [PlannedNotification] {
         let enabled = alarms.filter(\.isEnabled)
         guard !enabled.isEmpty, days > 0, limit > 0 else { return [] }
@@ -74,6 +83,7 @@ public enum NotificationPlanner {
         for offset in -1..<days {
             guard let day = today.adding(days: offset, calendar: calendar) else { continue }
             for alarm in enabled {
+                if !skipping.isEmpty, skipping.contains(doneKey(alarmID: alarm.id, day: day)) { continue }
                 for fire in fireDates(of: alarm, on: day, provider: provider, calendar: calendar) where fire > now {
                     result.append(PlannedNotification(
                         identifier: "alarm.\(alarm.id.uuidString).\(stamp(fire, calendar: calendar))",
