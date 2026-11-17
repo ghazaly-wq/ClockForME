@@ -39,7 +39,7 @@ enum BackupService {
         SettingsKey.equippedLiveStyle, SettingsKey.equippedIcon,
         SettingsKey.liveActivityEnabled, SettingsKey.liveActivityAutoStart,
         SettingsKey.morningEnabled, SettingsKey.morningHour, SettingsKey.morningMinute,
-        SettingsKey.taskShowAllTimes, SettingsKey.taskFollowsNextRing
+        SettingsKey.taskShowAllTimes, SettingsKey.taskFollowsNextRing, SettingsKey.appBlockEnabled
     ]
 
     private static let backupsFolderName = "Backups"
@@ -52,7 +52,8 @@ enum BackupService {
             BackupTask(
                 id: t.id, title: t.title, kindRaw: t.kindRaw, repetitionData: t.repetitionData, startDayISO: t.startDayISO,
                 endDayISO: t.endDayISO, notes: t.notes, createdAt: t.createdAt, sortOrder: t.sortOrder, alarmID: t.alarmID,
-                timeData: t.timeData, pageID: t.pageID, routineEndISO: t.routineEndISO, extraPrayersData: t.extraPrayersData
+                timeData: t.timeData, pageID: t.pageID, routineEndISO: t.routineEndISO, extraPrayersData: t.extraPrayersData,
+                blocksApps: t.blocksApps ? true : nil
             )
         }
         let completions = try context.fetch(FetchDescriptor<CompletionRecord>()).map { (c: CompletionRecord) -> BackupCompletion in
@@ -118,6 +119,7 @@ enum BackupService {
             record.pageID = t.pageID
             record.routineEndISO = t.routineEndISO
             record.extraPrayersData = t.extraPrayersData
+            record.blocksApps = t.blocksApps ?? false
             context.insert(record)
         }
         for c in document.completions {

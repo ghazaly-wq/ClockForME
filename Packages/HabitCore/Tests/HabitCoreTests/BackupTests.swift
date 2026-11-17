@@ -43,6 +43,17 @@ final class BackupTests: XCTestCase {
         XCTAssertEqual(decoded.settings["digitStyle"], .string("arabicIndic"))
     }
 
+    func testBlocksAppsSwitchSurvivesAndOldBackupsStillLoad() throws {
+        // A backup made before the switch existed has no such key: it loads with the switch unset.
+        let old = try BackupCoding.decode(try BackupCoding.encode(sample()))
+        XCTAssertNil(old.tasks[0].blocksApps)
+
+        var doc = sample()
+        doc.tasks[0].blocksApps = true
+        let decoded = try BackupCoding.decode(try BackupCoding.encode(doc))
+        XCTAssertEqual(decoded.tasks[0].blocksApps, true)
+    }
+
     func testRejectsGarbageAndNewerVersions() throws {
         XCTAssertThrowsError(try BackupCoding.decode(Data("not json".utf8))) { XCTAssertEqual($0 as? BackupError, .unreadable) }
         XCTAssertThrowsError(try BackupCoding.decode(Data("{\"hello\":1}".utf8))) { XCTAssertEqual($0 as? BackupError, .unreadable) }

@@ -29,6 +29,8 @@ final class TaskRecord {
     var routineEndISO: String? = nil
     /// More prayers the task's alarm follows with the same offset as `time` (copied from the alarm or page).
     var extraPrayersData: Data? = nil
+    /// "Block my chosen apps from this task's time until it is done". Only meaningful for a task with an alarm time.
+    var blocksApps: Bool = false
 
     init(
         id: UUID = UUID(),

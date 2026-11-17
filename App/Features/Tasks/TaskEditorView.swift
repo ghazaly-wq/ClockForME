@@ -30,6 +30,8 @@ struct TaskEditorView: View {
     /// The alarm already linked to the task being edited.
     @State private var linkedAlarm: AlarmRecord?
     @State private var alarmLoaded = false
+    /// "Block my chosen apps from the alarm's time until this task is done" (main tasks with an alarm only).
+    @State private var blocksApps = false
 
     init(target: EditorTarget) {
         self.target = target
@@ -40,6 +42,7 @@ struct TaskEditorView: View {
             _title = State(initialValue: task.title)
             _kind = State(initialValue: task.kind)
             _notes = State(initialValue: task.notes)
+            _blocksApps = State(initialValue: task.blocksApps)
             switch task.repetition {
             case nil:
                 _scheduleType = State(initialValue: .anytime)
@@ -121,6 +124,13 @@ struct TaskEditorView: View {
                     }
                     if alarmEnabled {
                         ScheduleFields(schedule: $alarmSchedule, timeOnly: true, timeTitle: "وقت التنبيه")
+                        if kind == .main {
+                            Section {
+                                Toggle("اقفل التطبيقات لين أخلصها", isOn: $blocksApps)
+                            } footer: {
+                                Text("من وقت التنبيه، إذا فتحت تطبيق من اللي اخترتها في أتمتة الاختصارات تطلع لك شاشة تخليك تخلّص المهمة أول. التفاصيل في الإعدادات ← قفل التطبيقات.")
+                            }
+                        }
                     }
                 }
 
@@ -182,6 +192,8 @@ struct TaskEditorView: View {
     /// `saved` is the task that is active now (a new one when the old task had history and was split).
     private func applyAlarm(to saved: TaskRecord, previous: TaskRecord?, repetition: Repetition?, title: String) {
         let existing = previous?.alarmID.flatMap { id in alarms.first { $0.id == id } }
+        // Only a main task that has an alarm can block apps; the switch resets when the alarm goes away.
+        saved.blocksApps = alarmAllowed && alarmEnabled && kind == .main && repetition != nil && blocksApps
 
         guard alarmAllowed, alarmEnabled, let repetition else {
             // Switched off on purpose: the alarm goes away, the task stays.

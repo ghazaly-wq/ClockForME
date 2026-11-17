@@ -43,16 +43,18 @@ public struct BackupTask: Codable, Equatable, Sendable {
     public var pageID: UUID?
     public var routineEndISO: String?
     public var extraPrayersData: Data?
+    /// "Block apps until this task is done" switch. Optional so backups made before it existed still load.
+    public var blocksApps: Bool?
 
     public init(
         id: UUID, title: String, kindRaw: String, repetitionData: Data?, startDayISO: String, endDayISO: String?,
         notes: String, createdAt: Date, sortOrder: Int, alarmID: UUID?, timeData: Data?, pageID: UUID?,
-        routineEndISO: String?, extraPrayersData: Data?
+        routineEndISO: String?, extraPrayersData: Data?, blocksApps: Bool? = nil
     ) {
         self.id = id; self.title = title; self.kindRaw = kindRaw; self.repetitionData = repetitionData
         self.startDayISO = startDayISO; self.endDayISO = endDayISO; self.notes = notes; self.createdAt = createdAt
         self.sortOrder = sortOrder; self.alarmID = alarmID; self.timeData = timeData; self.pageID = pageID
-        self.routineEndISO = routineEndISO; self.extraPrayersData = extraPrayersData
+        self.routineEndISO = routineEndISO; self.extraPrayersData = extraPrayersData; self.blocksApps = blocksApps
     }
 }
 

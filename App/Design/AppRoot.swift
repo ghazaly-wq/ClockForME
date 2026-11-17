@@ -27,6 +27,8 @@ enum SettingsKey {
     static let taskShowAllTimes = "taskShowAllTimes"
     /// Multi-prayer tasks: the "next task" follows the task's next ring, not its first (default on).
     static let taskFollowsNextRing = "taskFollowsNextRing"
+    /// Master switch for "block apps until the task is done" (default on; each task has its own switch, default off).
+    static let appBlockEnabled = "appBlockEnabled"
 }
 
 extension AppearanceMode {

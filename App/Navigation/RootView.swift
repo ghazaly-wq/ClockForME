@@ -21,11 +21,15 @@ struct RootView: View {
     @AppStorage(SettingsKey.prayerLongitude) private var longitude = 0.0
     @AppStorage(SettingsKey.alarmSound) private var alarmSound = ""
     @AppStorage(SettingsKey.taskFollowsNextRing) private var followsNextRing = true
+    @AppStorage(SettingsKey.appBlockEnabled) private var appBlockEnabled = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pageWidth: CGFloat = 393
     @State private var dragX: CGFloat = 0
     @State private var headerConfigs: [AppTab: HeaderConfig] = [:]
     @State private var refreshTick = 0
+    /// Bumped every 30 seconds so the app-block screen appears when a blocking task's time arrives.
+    @State private var blockTick = 0
+    private let blockTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     /// Anything that should make the notification plan be rebuilt.
     private var replanKey: String {
@@ -75,6 +79,32 @@ struct RootView: View {
             styleID: liveStyle, arabicDigits: DigitStyle(storedValue: digitRaw) == .arabicIndic,
             followsNextRing: followsNextRing
         )
+    }
+
+    // MARK: - App block
+
+    /// Tasks blocking the owner's apps right now (empty while the master switch is off, the app is in the
+    /// background, or a challenge is on screen: the challenge comes first).
+    private var blockingTasks: [BlockingTask] {
+        _ = blockTick
+        _ = refreshTick
+        guard appBlockEnabled, scenePhase == .active, router.activeChallenge == nil else { return [] }
+        let provider: AdhanPrayerTimes? = hasLocation ? AdhanPrayerTimes(latitude: latitude, longitude: longitude) : nil
+        return AppBlockService.blockingTasks(
+            tasks: tasks, completions: completions, alarms: alarms,
+            now: Date(), dayStartHour: dayStartHour, provider: provider
+        )
+    }
+
+    private func completeBlockingTask(_ task: TaskRecord) {
+        let now = Date()
+        let today = DayKey(date: now, calendar: Calendar.app, dayStartHour: dayStartHour)
+        let outcome = TaskActions.toggle(
+            task, on: today, tasks: tasks, completions: completions,
+            context: context, now: now, dayStartHour: dayStartHour
+        )
+        router.celebrate(outcome)
+        blockTick += 1
     }
 
     private func handle(_ url: URL) {
@@ -289,6 +319,16 @@ struct RootView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .achievementsNeedSync)) { _ in
             refreshTick += 1
+        }
+        .onReceive(blockTimer) { _ in blockTick += 1 }
+        // Over everything (tab bar included): finish the blocking task to get past it.
+        .overlay {
+            let blocking = blockingTasks
+            if !blocking.isEmpty {
+                AppBlockView(blocking: blocking, onDone: completeBlockingTask)
+                    .appRoot()
+                    .transition(.opacity)
+            }
         }
     }
 
