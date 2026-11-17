@@ -62,7 +62,7 @@ struct PageUseView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 16).padding(.vertical, 10)
                     .background(.thinMaterial, in: Capsule())
-                    .padding(.bottom, 24)
+                    .padding(.bottom, Metrics.homeRingDiameter / 2 + 40)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

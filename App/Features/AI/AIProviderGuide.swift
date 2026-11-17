@@ -16,7 +16,7 @@ extension AIProvider {
             GuideStep(text: "افتح صفحة Google AI Studio وسجّل دخول بحساب Google.", symbol: "person.crop.circle", mock: "Sign in with Google"),
             GuideStep(text: "اضغط «Create API key» (إنشاء مفتاح).", symbol: "plus.circle.fill", mock: "Create API key"),
             GuideStep(text: "اختر مشروع (أو اترك الافتراضي) واضغط «Create».", symbol: "folder.fill", mock: "Select a project"),
-            GuideStep(text: "انسخ المفتاح اللي يبدأ بـ AIza (أيقونة النسخ جنبه).", symbol: "doc.on.doc.fill", mock: "AIza••••••••"),
+            GuideStep(text: "انسخ المفتاح اللي يبدأ بـ AQ (أيقونة النسخ جنبه). المفاتيح القديمة كانت تبدأ بـ AIza وتشتغل بنفس الطريقة.", symbol: "doc.on.doc.fill", mock: "AQ••••••••"),
         ]
         case .openai: [
             GuideStep(text: "افتح صفحة OpenAI API keys وسجّل دخول. تحتاج حساب API فيه رصيد (منفصل عن اشتراك ChatGPT).", symbol: "person.crop.circle", mock: "Log in"),
