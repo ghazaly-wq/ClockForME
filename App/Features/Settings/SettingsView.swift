@@ -19,6 +19,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.morningHour) private var morningHour = 7
     @AppStorage(SettingsKey.morningMinute) private var morningMinute = 0
     @AppStorage(SettingsKey.appBlockEnabled) private var appBlockEnabled = true
+    @AppStorage(SettingsKey.soundEffectsEnabled) private var soundEffectsEnabled = true
 
     private var digits: DigitStyle { DigitStyle(storedValue: digitRaw) }
 
@@ -96,6 +97,14 @@ struct SettingsView: View {
                     Text("قفل التطبيقات")
                 } footer: {
                     Text("لما يكون على مهمة «اقفل التطبيقات لين أخلصها» وفات وقتها، تطلع شاشة تخليك تخلّصها أول لما تفتح التطبيق. تطفيه يوقف كل القفل من غير ما تغيّر المهام.")
+                }
+
+                Section {
+                    Toggle("المؤثرات الصوتية", isOn: $soundEffectsEnabled)
+                } header: {
+                    Text("الأصوات")
+                } footer: {
+                    Text("أصوات قصيرة لما تنجز مهمة، أو تفتح إنجاز، أو تخلص كل مهام اليوم، أو تشتري من المتجر. تتبع زر الصامت في الجوال.")
                 }
 
                 Section("المهمات والستريك") {
