@@ -145,28 +145,6 @@ final class NotificationPlannerTests: XCTestCase {
         let quiet = NotificationPlanner.plan(alarms: [round], from: date(2026, 3, 10, 0, 0), days: 3, provider: nil, calendar: cal)
         XCTAssertEqual(quiet.map(\.fireDate), ringing.map(\.fireDate))
     }
-}
-
-final class AdhanPrayerTimesTests: XCTestCase {
-    func testRiyadhOrderingAndIshaAfterMaghrib() throws {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(secondsFromGMT: 3 * 3600)!
-        let provider = AdhanPrayerTimes(latitude: 24.7136, longitude: 46.6753)
-        let t = try XCTUnwrap(provider.times(for: DayKey(year: 2026, month: 3, day: 11), calendar: cal))
-        let order: [Prayer] = [.fajr, .dhuhr, .asr, .maghrib, .isha]
-        for (a, b) in zip(order, order.dropFirst()) { XCTAssertLessThan(t[a]!, t[b]!) }
-        // Umm al-Qura: Isha is 90 minutes after Maghrib (120 in Ramadan).
-        let gap = t[.isha]!.timeIntervalSince(t[.maghrib]!) / 60
-        XCTAssertEqual(gap, 90, accuracy: 1)
-        // Dhuhr in Riyadh falls around midday local time.
-        let hour = cal.component(.hour, from: t[.dhuhr]!)
-        XCTAssertTrue((11...12).contains(hour))
-    }
-
-    func testInvalidCoordinatesGiveNil() {
-        let cal = Calendar(identifier: .gregorian)
-        XCTAssertNil(AdhanPrayerTimes(latitude: 200, longitude: 0).times(for: DayKey(year: 2026, month: 3, day: 11), calendar: cal))
-    }
 
     // MARK: - Alarms of tasks that are already done
 
@@ -193,5 +171,27 @@ final class AdhanPrayerTimesTests: XCTestCase {
         let now = date(2026, 3, 10, 8, 0)
         let plan = NotificationPlanner.plan(alarms: [alarm], from: now, days: 1, provider: nil, calendar: cal)
         XCTAssertEqual(plan.count, 1)
+    }
+}
+
+final class AdhanPrayerTimesTests: XCTestCase {
+    func testRiyadhOrderingAndIshaAfterMaghrib() throws {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(secondsFromGMT: 3 * 3600)!
+        let provider = AdhanPrayerTimes(latitude: 24.7136, longitude: 46.6753)
+        let t = try XCTUnwrap(provider.times(for: DayKey(year: 2026, month: 3, day: 11), calendar: cal))
+        let order: [Prayer] = [.fajr, .dhuhr, .asr, .maghrib, .isha]
+        for (a, b) in zip(order, order.dropFirst()) { XCTAssertLessThan(t[a]!, t[b]!) }
+        // Umm al-Qura: Isha is 90 minutes after Maghrib (120 in Ramadan).
+        let gap = t[.isha]!.timeIntervalSince(t[.maghrib]!) / 60
+        XCTAssertEqual(gap, 90, accuracy: 1)
+        // Dhuhr in Riyadh falls around midday local time.
+        let hour = cal.component(.hour, from: t[.dhuhr]!)
+        XCTAssertTrue((11...12).contains(hour))
+    }
+
+    func testInvalidCoordinatesGiveNil() {
+        let cal = Calendar(identifier: .gregorian)
+        XCTAssertNil(AdhanPrayerTimes(latitude: 200, longitude: 0).times(for: DayKey(year: 2026, month: 3, day: 11), calendar: cal))
     }
 }
