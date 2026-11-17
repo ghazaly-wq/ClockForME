@@ -108,6 +108,7 @@ struct ShopSection: View {
         case .purchasable:
             Button("شراء") {
                 if AchievementActions.buy(item, owned: owned, snapshot: snapshot, context: context, now: Date()) {
+                    SoundEffects.shared.play(.purchase)
                     equip(item)
                 }
             }

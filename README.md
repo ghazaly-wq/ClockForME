@@ -342,6 +342,14 @@ a shake sensor fall back to math.
   newest are kept, and they're visible in the Files app.
 - The custom alarm sound file isn't backed up.
 
+### 6.12a Sound effects
+Four moments have sounds: task done, achievement / level up, day complete and shop purchase (`SoundEvent`). Each has
+4 sounds (`App/Resources/Sounds/sfx_<event>_0…3.m4a`). `SoundEffects` plays them in random order through
+`ShuffleBag` (HabitCore, pure): a sound only comes back after the other three have played, and the bag is kept in
+`UserDefaults` between launches. `AppRouter.celebrate` picks one sound per completion (day complete beats
+achievement beats task done). Audio uses the ambient category, so it follows the silent switch. A Settings switch
+(`SettingsKey.soundEffectsEnabled`, default on) turns them off.
+
 ### 6.12 Settings keys
 All keys are in `SettingsKey` (`App/Design/AppRoot.swift`, plus an extension in `BackupService.swift`):
 appearance, digitStyle, dayStartHour, prayer location, equipped shop items, Live Activity options, morning
@@ -784,6 +792,14 @@ SwiftData ─► WidgetSnapshotBuilder ─► WidgetSnapshot.json (حاوية Ap
 - **نسخ تلقائية أسبوعية** تنحفظ في `Documents/Backups` (`habits-backup-YYYY-MM-DD.json`). ينحفظ آخر ٤،
   وتظهر في تطبيق الملفات.
 - ملف صوت المنبه المخصص ما يدخل في النسخة.
+
+### ٦.١٢ أ المؤثرات الصوتية
+أربع لحظات لها أصوات: إنجاز مهمة، إنجاز/مستوى جديد، اكتمال اليوم، وشراء من المتجر (`SoundEvent`). كل لحظة لها ٤
+أصوات (`App/Resources/Sounds/sfx_<event>_0…3.m4a`). `SoundEffects` يشغلها بترتيب عشوائي عن طريق `ShuffleBag`
+(في HabitCore، صافية): الصوت ما يرجع إلا بعد ما تخلص الثلاثة الثانية، والحالة تنحفظ في `UserDefaults` بين مرات
+التشغيل. و`AppRouter.celebrate` يختار صوت واحد لكل إنجاز (اكتمال اليوم أقوى من الإنجاز، والإنجاز أقوى من إنجاز
+المهمة). الصوت بفئة ambient فيتبع زر الصامت. ومفتاح في الإعدادات (`SettingsKey.soundEffectsEnabled`، مفعّل
+افتراضياً) يطفيها.
 
 ### ٦.١٢ مفاتيح الإعدادات
 كلها في `SettingsKey` (`App/Design/AppRoot.swift`، وفيه امتداد في `BackupService.swift`): المظهر، ونمط

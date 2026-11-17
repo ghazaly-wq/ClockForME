@@ -5,6 +5,8 @@ import SwiftUI
 
 /// What happened because of a completion, so the UI can celebrate.
 struct CompletionOutcome {
+    /// A task was marked done (false when a completion was removed).
+    var didComplete = false
     var completedDay = false
     var newLevel: ProgressSummary?
     var newAchievements: [AchievementDef] = []
@@ -65,6 +67,7 @@ enum TaskActions {
         )
 
         var outcome = CompletionOutcome()
+        outcome.didComplete = true
         if task.kind == .main, before.todayMain.state != .complete, after.todayMain.state == .complete {
             outcome.completedDay = true
         }

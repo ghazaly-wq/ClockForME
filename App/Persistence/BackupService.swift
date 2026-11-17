@@ -39,7 +39,8 @@ enum BackupService {
         SettingsKey.equippedLiveStyle, SettingsKey.equippedIcon,
         SettingsKey.liveActivityEnabled, SettingsKey.liveActivityAutoStart,
         SettingsKey.morningEnabled, SettingsKey.morningHour, SettingsKey.morningMinute,
-        SettingsKey.taskShowAllTimes, SettingsKey.taskFollowsNextRing, SettingsKey.appBlockEnabled
+        SettingsKey.taskShowAllTimes, SettingsKey.taskFollowsNextRing, SettingsKey.appBlockEnabled,
+        SettingsKey.soundEffectsEnabled
     ]
 
     private static let backupsFolderName = "Backups"

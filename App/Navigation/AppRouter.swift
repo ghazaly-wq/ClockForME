@@ -53,6 +53,14 @@ final class AppRouter {
     private var pendingLevelUp: LevelUpInfo?
 
     func celebrate(_ outcome: CompletionOutcome) {
+        // One sound per completion, the biggest moment wins: day complete > achievement / level up > task done.
+        if outcome.completedDay {
+            SoundEffects.shared.play(.dayComplete)
+        } else if !outcome.newAchievements.isEmpty || outcome.newLevel != nil {
+            SoundEffects.shared.play(.achievement)
+        } else if outcome.didComplete {
+            SoundEffects.shared.play(.taskDone)
+        }
         if outcome.completedDay {
             showDayComplete = true
             Task { [weak self] in
@@ -60,11 +68,16 @@ final class AppRouter {
                 self?.showDayComplete = false
             }
         }
-        present(achievements: outcome.newAchievements, newLevel: outcome.newLevel)
+        show(achievements: outcome.newAchievements, newLevel: outcome.newLevel)
     }
 
     /// Achievements first; a level-up that came with them waits until that sheet is closed.
     func present(achievements: [AchievementDef], newLevel: ProgressSummary?) {
+        if !achievements.isEmpty || newLevel != nil { SoundEffects.shared.play(.achievement) }
+        show(achievements: achievements, newLevel: newLevel)
+    }
+
+    private func show(achievements: [AchievementDef], newLevel: ProgressSummary?) {
         let info = newLevel.map { LevelUpInfo(level: $0.level, title: $0.title) }
         if !achievements.isEmpty {
             pendingLevelUp = info

@@ -29,6 +29,8 @@ enum SettingsKey {
     static let taskFollowsNextRing = "taskFollowsNextRing"
     /// Master switch for "block apps until the task is done" (default on; each task has its own switch, default off).
     static let appBlockEnabled = "appBlockEnabled"
+    /// Celebration sounds (task done, achievement, day complete, shop purchase). Default on.
+    static let soundEffectsEnabled = "soundEffectsEnabled"
 }
 
 extension AppearanceMode {
