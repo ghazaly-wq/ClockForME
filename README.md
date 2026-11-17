@@ -216,8 +216,9 @@ The widget extension does **not** link HabitCore. Logic it needs is mirrored in 
   the task was stopped).
 - **App block** (`TaskRecord.blocksApps`, off by default): a main task with an enabled alarm can block the
   owner's chosen apps from its first time of the day until it is done. iOS can't close other apps, so the
-  owner makes a Shortcuts automation that opens this app whenever one of those apps opens, and `RootView`
-  covers the app with `AppBlockView` while `AppBlockRule.blockingIDs` (HabitCore, pure) returns tasks. The
+  owner makes a Shortcuts automation that runs the app's `BlockStatusIntent` ("فيه قفل؟", answers yes/no
+  without opening the app) whenever one of those apps opens, and opens this app only if the answer is yes.
+  `RootView` covers the app with `AppBlockView` while `AppBlockRule.blockingIDs` (HabitCore, pure) returns tasks. The
   screen's only way out is marking the task done. A master switch (`SettingsKey.appBlockEnabled`, default on)
   turns it all off. `AppBlockGuideView` (Settings) explains the automation steps.
 
@@ -461,7 +462,7 @@ whole history at once. Make sure that's what you want.
 | Alarm timing math | `HabitCore/Alarms/NotificationPlanner.swift` |
 | AlarmKit integration | `App/Services/AlarmScheduler.swift` |
 | Notification-only alarms | `App/Services/AlarmNotifier.swift` |
-| App block (apps locked until a task is done) | `HabitCore/Tasks/AppBlock.swift`, `App/Persistence/AppBlockService.swift`, `Features/AppBlock/AppBlockView.swift`, `RootView` |
+| App block (apps locked until a task is done) | `HabitCore/Tasks/AppBlock.swift`, `App/Persistence/AppBlockService.swift`, `App/Services/BlockStatusIntent.swift`, `Features/AppBlock/AppBlockView.swift`, `RootView` |
 | Challenges | `HabitCore/Alarms/AlarmChallenge.swift`, `Features/Alarms/ChallengeSection.swift`, `Features/Challenges/ChallengeView.swift` |
 | Page blocks | `HabitCore/Pages/PageSchema.swift`, `Features/Pages/BlockUseView.swift`, `BlockConfigView.swift`, `PageSupport.swift` |
 | Page templates | `HabitCore/Pages/PageTemplates.swift` |
@@ -665,7 +666,8 @@ SwiftData ─► WidgetSnapshotBuilder ─► WidgetSnapshot.json (حاوية Ap
 - `routineEnd` (شامل، منسوخ من نهاية روتين التنبيه) غير `endDay` (غير شامل، معناه إن المهمة انوقفت).
 - **قفل التطبيقات** (`TaskRecord.blocksApps`، مطفي افتراضياً): المهمة الرئيسية اللي لها تنبيه مفعّل تقدر تقفل
   التطبيقات اللي اخترتها من أول وقت لها في اليوم لين تخلصها. iOS ما يخلي تطبيق يقفل تطبيقات ثانية، فالمالك
-  يسوي أتمتة في الاختصارات تفتح هذا التطبيق كل ما انفتح تطبيق من اللي اختارها، و`RootView` يغطي التطبيق بـ
+  يسوي أتمتة في الاختصارات تشغّل أمر `BlockStatusIntent` («فيه قفل؟»، يجاوب نعم/لا من غير ما يفتح التطبيق) كل ما
+  انفتح تطبيق من اللي اختارها، وتفتح هذا التطبيق بس إذا الجواب نعم. و`RootView` يغطي التطبيق بـ
   `AppBlockView` طول ما `AppBlockRule.blockingIDs` (في HabitCore، صافية) ترجع مهمات. المخرج الوحيد من الشاشة
   هو إنك تعلّم المهمة منجزة. ومفتاح عام (`SettingsKey.appBlockEnabled`، مفعّل افتراضياً) يطفي كل شي.
   و`AppBlockGuideView` (في الإعدادات) يشرح خطوات الأتمتة.
@@ -893,7 +895,7 @@ SwiftData ─► WidgetSnapshotBuilder ─► WidgetSnapshot.json (حاوية Ap
 | حساب مواعيد التنبيهات | `HabitCore/Alarms/NotificationPlanner.swift` |
 | التعامل مع AlarmKit | `App/Services/AlarmScheduler.swift` |
 | تنبيهات الإشعار فقط | `App/Services/AlarmNotifier.swift` |
-| قفل التطبيقات (لين تخلص مهمة) | `HabitCore/Tasks/AppBlock.swift`، `App/Persistence/AppBlockService.swift`، `Features/AppBlock/AppBlockView.swift`، `RootView` |
+| قفل التطبيقات (لين تخلص مهمة) | `HabitCore/Tasks/AppBlock.swift`، `App/Persistence/AppBlockService.swift`، `App/Services/BlockStatusIntent.swift`، `Features/AppBlock/AppBlockView.swift`، `RootView` |
 | التحديات | `HabitCore/Alarms/AlarmChallenge.swift`، `Features/Alarms/ChallengeSection.swift`، `Features/Challenges/ChallengeView.swift` |
 | قطع الصفحات | `HabitCore/Pages/PageSchema.swift`، `Features/Pages/BlockUseView.swift`، `BlockConfigView.swift`، `PageSupport.swift` |
 | قوالب الصفحات | `HabitCore/Pages/PageTemplates.swift` |
