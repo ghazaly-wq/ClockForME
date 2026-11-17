@@ -167,4 +167,31 @@ final class AdhanPrayerTimesTests: XCTestCase {
         let cal = Calendar(identifier: .gregorian)
         XCTAssertNil(AdhanPrayerTimes(latitude: 200, longitude: 0).times(for: DayKey(year: 2026, month: 3, day: 11), calendar: cal))
     }
+
+    // MARK: - Alarms of tasks that are already done
+
+    func testDoneDayIsSkippedButOtherDaysStillRing() {
+        let alarm = AlarmRule(title: "a", repetition: .daily, time: .clock(hour: 22, minute: 0))
+        let now = date(2026, 3, 10, 8, 0)
+        let done: Set<String> = [NotificationPlanner.doneKey(alarmID: alarm.id, day: DayKey(year: 2026, month: 3, day: 10))]
+        let plan = NotificationPlanner.plan(alarms: [alarm], from: now, days: 3, provider: nil, calendar: cal, skipping: done)
+        // Today's 22:00 is skipped; tomorrow's and the day after's are kept.
+        XCTAssertEqual(plan.map(\.fireDate), [date(2026, 3, 11, 22, 0), date(2026, 3, 12, 22, 0)])
+    }
+
+    func testOnlyTheAlarmWhoseTaskIsDoneIsSilenced() {
+        let first = AlarmRule(title: "a", repetition: .daily, time: .clock(hour: 22, minute: 0))
+        let second = AlarmRule(title: "b", repetition: .daily, time: .clock(hour: 22, minute: 30))
+        let now = date(2026, 3, 10, 8, 0)
+        let done: Set<String> = [NotificationPlanner.doneKey(alarmID: first.id, day: DayKey(year: 2026, month: 3, day: 10))]
+        let plan = NotificationPlanner.plan(alarms: [first, second], from: now, days: 1, provider: nil, calendar: cal, skipping: done)
+        XCTAssertEqual(plan.map(\.alarmID), [second.id])
+    }
+
+    func testNothingSkippedByDefault() {
+        let alarm = AlarmRule(title: "a", repetition: .daily, time: .clock(hour: 22, minute: 0))
+        let now = date(2026, 3, 10, 8, 0)
+        let plan = NotificationPlanner.plan(alarms: [alarm], from: now, days: 1, provider: nil, calendar: cal)
+        XCTAssertEqual(plan.count, 1)
+    }
 }

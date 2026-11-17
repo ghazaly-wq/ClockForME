@@ -243,15 +243,40 @@ enum AlarmActions {
         await replan(container: container)
     }
 
+    /// Alarm/day pairs whose linked task (a main-task alarm's task, or a page's task) is already done, as
+    /// `NotificationPlanner.doneKey`s: those days' rings are not scheduled, so finishing a task early silences its alarm.
+    static func completedOccurrences(
+        alarms: [AlarmRecord], tasks: [TaskRecord], completions: [CompletionRecord]
+    ) -> Set<String> {
+        var alarmsOfTask: [UUID: [UUID]] = [:]
+        for task in tasks where task.kind == .main {
+            var ids: [UUID] = []
+            if let alarmID = task.alarmID { ids.append(alarmID) }
+            if let pageID = task.pageID { ids += alarms.filter { $0.linkedPageID == pageID }.map(\.id) }
+            if !ids.isEmpty { alarmsOfTask[task.id] = ids }
+        }
+        var keys = Set<String>()
+        for completion in completions {
+            for alarmID in alarmsOfTask[completion.taskID] ?? [] {
+                keys.insert(NotificationPlanner.doneKey(alarmID: alarmID, day: completion.day))
+            }
+        }
+        return keys
+    }
+
     /// Reads alarms and the prayer location from storage and refreshes the pending notifications.
     static func replan(container: ModelContainer) async {
         let context = ModelContext(container)
         expireFinished(context: context)
         backfillTaskTimes(context: context)
-        let alarms = ((try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []).map(\.rule)
+        let records = (try? context.fetch(FetchDescriptor<AlarmRecord>())) ?? []
+        let alarms = records.map(\.rule)
+        let tasks = (try? context.fetch(FetchDescriptor<TaskRecord>())) ?? []
+        let completions = (try? context.fetch(FetchDescriptor<CompletionRecord>())) ?? []
+        let completed = completedOccurrences(alarms: records, tasks: tasks, completions: completions)
         let location = PrayerLocation.load()
         // Ringing alarms go through AlarmKit; "notification only" ones are plain local notifications.
-        await AlarmScheduler.replan(alarms: alarms.filter { $0.delivery == .alarm }, location: location)
-        await AlarmNotifier.replan(alarms: alarms.filter { $0.delivery == .notification }, location: location)
+        await AlarmScheduler.replan(alarms: alarms.filter { $0.delivery == .alarm }, location: location, completed: completed)
+        await AlarmNotifier.replan(alarms: alarms.filter { $0.delivery == .notification }, location: location, completed: completed)
     }
 }

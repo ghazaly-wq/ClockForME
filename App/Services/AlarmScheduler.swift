@@ -122,7 +122,7 @@ enum AlarmScheduler {
 
     /// Makes AlarmKit's scheduled alarms match the plan: cancels stale ones, adds missing ones.
     /// Alarms that are ringing, snoozed or paused are never touched.
-    static func replan(alarms: [AlarmRule], location: PrayerLocation?, now: Date = Date()) async {
+    static func replan(alarms: [AlarmRule], location: PrayerLocation?, completed: Set<String> = [], now: Date = Date()) async {
         let manager = AlarmManager.shared
         guard manager.authorizationState == .authorized else { return }
 
@@ -131,7 +131,8 @@ enum AlarmScheduler {
             from: now.addingTimeInterval(5),
             limit: defaultLimit,
             provider: location?.provider,
-            calendar: Calendar.app
+            calendar: Calendar.app,
+            skipping: completed
         )
         let rules = Dictionary(alarms.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
