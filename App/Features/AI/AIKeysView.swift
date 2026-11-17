@@ -8,6 +8,8 @@ struct AIKeysView: View {
     @State private var keyText = ""
     @State private var message: String?
     @State private var saveFailed = false
+    @State private var testing: UUID?
+    @State private var results: [UUID: String] = [:]
 
     var body: some View {
         List {
@@ -51,6 +53,17 @@ struct AIKeysView: View {
                             .font(.footnote.monospaced())
                             .foregroundStyle(.secondary)
                             .environment(\.layoutDirection, .leftToRight)
+                        HStack {
+                            Button(testing == entry.id ? "جاري الاختبار…" : "اختبر المفتاح") { runTest(entry) }
+                                .font(.footnote)
+                                .buttonStyle(.borderless)
+                                .disabled(testing != nil)
+                            if let result = results[entry.id] {
+                                Text(result)
+                                    .font(.footnote)
+                                    .foregroundStyle(result == "المفتاح شغّال ✓" ? Theme.primary : Theme.danger)
+                            }
+                        }
                     }
                 }
                 .onDelete { offsets in
@@ -90,6 +103,16 @@ struct AIKeysView: View {
         keyText = ""
         persist()
         if !saveFailed { message = "انحفظ المفتاح ✓" }
+    }
+
+    private func runTest(_ entry: AIKeyEntry) {
+        testing = entry.id
+        results[entry.id] = nil
+        Task {
+            let problem = await AIClient.test(entry)
+            results[entry.id] = problem ?? "المفتاح شغّال ✓"
+            testing = nil
+        }
     }
 
     private func persist() {
