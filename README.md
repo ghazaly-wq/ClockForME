@@ -347,7 +347,8 @@ Four moments have sounds: task done, achievement / level up, day complete and sh
 4 sounds (`App/Resources/Sounds/sfx_<event>_0…3.m4a`). `SoundEffects` plays them in random order through
 `ShuffleBag` (HabitCore, pure): a sound only comes back after the other three have played, and the bag is kept in
 `UserDefaults` between launches. `AppRouter.celebrate` picks one sound per completion (day complete beats
-achievement beats task done). Audio uses the ambient category, so it follows the silent switch. A Settings switch
+achievement beats task done). Audio uses the playback category with `mixWithOthers`: it plays even on silent,
+follows the media volume, and doesn't stop the user's music. A Settings switch
 (`SettingsKey.soundEffectsEnabled`, default on) turns them off.
 
 ### 6.12 Settings keys
@@ -798,7 +799,8 @@ SwiftData ─► WidgetSnapshotBuilder ─► WidgetSnapshot.json (حاوية Ap
 أصوات (`App/Resources/Sounds/sfx_<event>_0…3.m4a`). `SoundEffects` يشغلها بترتيب عشوائي عن طريق `ShuffleBag`
 (في HabitCore، صافية): الصوت ما يرجع إلا بعد ما تخلص الثلاثة الثانية، والحالة تنحفظ في `UserDefaults` بين مرات
 التشغيل. و`AppRouter.celebrate` يختار صوت واحد لكل إنجاز (اكتمال اليوم أقوى من الإنجاز، والإنجاز أقوى من إنجاز
-المهمة). الصوت بفئة ambient فيتبع زر الصامت. ومفتاح في الإعدادات (`SettingsKey.soundEffectsEnabled`، مفعّل
+المهمة). الصوت بفئة playback مع `mixWithOthers`: يشتغل حتى على الصامت، ويتبع مستوى صوت الجوال، وما يوقف
+موسيقاك. ومفتاح في الإعدادات (`SettingsKey.soundEffectsEnabled`، مفعّل
 افتراضياً) يطفيها.
 
 ### ٦.١٢ مفاتيح الإعدادات

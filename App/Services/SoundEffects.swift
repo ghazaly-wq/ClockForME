@@ -12,7 +12,8 @@ enum SoundEvent: String, CaseIterable {
 
 /// Short celebration sounds. Each moment has 4 sounds (`sfx_<event>_0...3` in Resources/Sounds). They play in random
 /// order, but a sound only comes back after the other three have played (`ShuffleBag`); the state is kept between
-/// launches. Uses the "ambient" audio category: it follows the silent switch and mixes with the user's music.
+/// launches. Uses the "playback" audio category: the sounds play even when the ringer is on silent and follow the
+/// media volume (the volume buttons), and `mixWithOthers` keeps the user's music or podcast playing underneath.
 @MainActor
 final class SoundEffects {
     static let shared = SoundEffects()
@@ -60,7 +61,7 @@ final class SoundEffects {
         guard !sessionReady else { return }
         sessionReady = true
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, mode: .default, options: [])
+        try? session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
         try? session.setActive(true)
     }
 }
