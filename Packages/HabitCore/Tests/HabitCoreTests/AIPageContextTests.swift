@@ -2,17 +2,20 @@ import XCTest
 @testable import HabitCore
 
 final class AIPageContextTests: XCTestCase {
-    func testSummaryListsOnlyFilledInputBlocks() {
-        var weight = Block(kind: .number, title: "الوزن", unit: "كجم")
-        weight.id = UUID()
-        let notes = Block(kind: .textField, title: "ملاحظات")
-        let heading = Block(kind: .heading, title: "عنوان")
+    func testSummaryKeepsHeadingsAndContainerNamesAroundValues() {
+        let weight = Block(kind: .number, title: "الوزن", unit: "كجم")
+        let sets = Block(kind: .sets, title: "المجموعات", columns: ["الوزن", "العدّات"])
+        let empty = Block(kind: .textField, title: "ملاحظات")
+        let note = Block(kind: .text, text: "ابدأ بتسخين")
         let ask = Block(kind: .ai, title: "اسأل")
+        let chest = Block(kind: .container, title: "تمرين الصدر", children: [sets, empty])
+        let heading = Block(kind: .heading, title: "يوم الدفع")
         var session = PageSession(pageID: UUID(), tabID: UUID(), day: DayKey(year: 2026, month: 3, day: 10))
         session.set(.number(80), for: weight.id)
-        session.set(.text("  "), for: notes.id)
-        let text = AIPageContext.summary(blocks: [weight, notes, heading, ask], session: session)
-        XCTAssertEqual(text, "الوزن: 80 كجم")
+        session.set(.rows([SetRow(values: [60, 10]), SetRow(values: [nil, nil])]), for: sets.id)
+        session.set(.text("  "), for: empty.id)
+        let text = AIPageContext.summary(blocks: [heading, note, weight, chest, ask], session: session)
+        XCTAssertEqual(text, "[يوم الدفع]\nابدأ بتسخين\nالوزن: 80 كجم\n[تمرين الصدر]\n  المجموعات: (1) 60 × 10")
     }
 
     func testChecklistAndChoiceUseOptionNames() {
