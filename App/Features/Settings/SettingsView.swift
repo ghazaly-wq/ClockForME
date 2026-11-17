@@ -18,6 +18,7 @@ struct SettingsView: View {
     @AppStorage(SettingsKey.morningEnabled) private var morningEnabled = false
     @AppStorage(SettingsKey.morningHour) private var morningHour = 7
     @AppStorage(SettingsKey.morningMinute) private var morningMinute = 0
+    @AppStorage(SettingsKey.appBlockEnabled) private var appBlockEnabled = true
 
     private var digits: DigitStyle { DigitStyle(storedValue: digitRaw) }
 
@@ -86,6 +87,15 @@ struct SettingsView: View {
                     Text("المهمات متعددة الصلوات")
                 } footer: {
                     Text("لما يكون تنبيه المهمة على أكثر من صلاة (مثلاً الظهر والعصر والعشاء). الأول يعرض كل الأوقات في سطر المهمة بدل الأول بس. والثاني يخلي «المهمة القادمة» في الرئيسية وشاشة القفل والويدجت تنتقل لوقت الصلاة الجاية بعد ما يمر الأول.")
+                }
+
+                Section {
+                    Toggle("قفل التطبيقات", isOn: $appBlockEnabled)
+                    NavigationLink("كيف أفعّل القفل؟") { AppBlockGuideView() }
+                } header: {
+                    Text("قفل التطبيقات")
+                } footer: {
+                    Text("لما يكون على مهمة «اقفل التطبيقات لين أخلصها» وفات وقتها، تطلع شاشة تخليك تخلّصها أول لما تفتح التطبيق. تطفيه يوقف كل القفل من غير ما تغيّر المهام.")
                 }
 
                 Section("المهمات والستريك") {
