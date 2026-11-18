@@ -61,7 +61,8 @@ public enum AIChat {
                 "contents": messages.map { message in
                     ["role": message.role == .user ? "user" : "model", "parts": [["text": message.text]]]
                 },
-                "generationConfig": ["maxOutputTokens": maxTokens]
+                // Gemini 2.5 counts its hidden "thinking" against the output limit, which cuts long answers short.
+                "generationConfig": ["maxOutputTokens": maxTokens, "thinkingConfig": ["thinkingBudget": 0]]
             ]
             if let system, !system.isEmpty { payload["systemInstruction"] = ["parts": [["text": system]]] }
             body = payload
@@ -126,12 +127,13 @@ public enum AIChat {
         keys: [AIKeyEntry],
         system: String?,
         messages: [AIMessage],
+        maxTokens: Int = 2000,
         send: (AIKeyEntry, AIHTTPRequest) async throws -> Data
     ) async throws -> (text: String, used: AIKeyEntry) {
         guard !keys.isEmpty else { throw AIChatError.noKeys }
         var failures: [String] = []
         for entry in keys {
-            let request = request(provider: entry.provider, key: entry.key, system: system, messages: messages)
+            let request = request(provider: entry.provider, key: entry.key, system: system, messages: messages, maxTokens: maxTokens)
             do {
                 let data = try await send(entry, request)
                 if let text = reply(provider: entry.provider, data: data) { return (text, entry) }

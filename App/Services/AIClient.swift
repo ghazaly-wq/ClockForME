@@ -20,9 +20,9 @@ enum AIClient {
     }
 
     /// Asks with every saved key in fallback order (optionally preferring one provider).
-    static func ask(system: String?, messages: [AIMessage], preferring: AIProvider? = nil) async throws -> (text: String, used: AIKeyEntry) {
+    static func ask(system: String?, messages: [AIMessage], maxTokens: Int = 2000, preferring: AIProvider? = nil) async throws -> (text: String, used: AIKeyEntry) {
         let keys = AIKeyStore.load().fallbackOrder(preferring: preferring)
-        return try await AIChat.complete(keys: keys, system: system, messages: messages) { _, request in
+        return try await AIChat.complete(keys: keys, system: system, messages: messages, maxTokens: maxTokens) { _, request in
             try await send(request)
         }
     }

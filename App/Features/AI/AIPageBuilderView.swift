@@ -113,15 +113,19 @@ struct AIPageBuilderView: View {
         messages.append(AIMessage(role: .user, text: text))
         Task {
             do {
-                let result = try await AIClient.ask(system: AIPageBuilder.systemPrompt, messages: messages)
+                let result = try await AIClient.ask(system: AIPageBuilder.systemPrompt, messages: messages, maxTokens: 8000)
                 switch AIPageBuilder.page(from: result.text) {
                 case .success(let page):
                     conversation = messages + [AIMessage(role: .assistant, text: result.text)]
                     draft = page
                     tabIndex = 0
                     request = ""
-                case .failure:
-                    error = "المساعد ما رجّع صفحة مفهومة. جرّب توضّح طلبك أكثر أو أعد المحاولة."
+                case .failure(let problem):
+                    switch problem {
+                    case .noJSON: error = "المساعد ما رجّع صفحة (رد نصي بس). أعد المحاولة أو وضّح الطلب."
+                    case .badJSON: error = "رد المساعد انقطع أو فيه خطأ في الصياغة. أعد المحاولة، ولو تكرر قصّر الطلب."
+                    case .empty: error = "المساعد رجّع صفحة بدون قطع مدعومة. وضّح وش القطع اللي تبيها."
+                    }
                 }
             } catch let failure as AIChatError {
                 error = AIChat.arabicReason(failure)

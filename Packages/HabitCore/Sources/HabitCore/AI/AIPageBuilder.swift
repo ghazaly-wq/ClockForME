@@ -43,7 +43,7 @@ public enum AIPageBuilder {
     - button: title, action ("finishSession" | "clearFields")
     - ai: title, systemPrompt (instructions for an AI helper inside the page), includePageData (bool)
 
-    Rules: input blocks are what the user fills in each session; use containers to group related inputs under a name. Titles inside "sources" must match exact titles of blocks in the same tab. End most pages with a finishSession button. Keep it practical and not too long (under 30 blocks per tab). Never output anything except the JSON object.
+    Rules: input blocks are what the user fills in each session; use containers to group related inputs under a name. Titles inside "sources" must match exact titles of blocks in the same tab. End most pages with a finishSession button. Keep it practical and not too long (under 30 blocks per tab). Blocks cannot calculate: there are no formulas or automatic totals/averages. Approximate such requests with the blocks above: number blocks (with target and a progress bar for "daily total vs goal"), a chart or history of those blocks for trends over days, and an ai block with includePageData true for anything that needs calculation or advice. Do not invent block types. Keep the JSON compact: no comments, no trailing commas, short titles. Never output anything except the JSON object.
     """
 
     // MARK: - Spec (what the model returns)
