@@ -247,7 +247,7 @@ public enum AIPageBuilder {
                 if block.kind == .nutrition {
                     var ids: [UUID] = []
                     for title in spec?.meals ?? [] {
-                        for meal in matches(title, [.container, .sets]) where !ids.contains(meal.id) {
+                        for meal in matches(title, among: [.container, .sets]) where !ids.contains(meal.id) {
                             let hasTable = meal.kind == .sets || meal.children.flattened.contains { $0.kind == .sets }
                             if hasTable { ids.append(meal.id) }
                         }
