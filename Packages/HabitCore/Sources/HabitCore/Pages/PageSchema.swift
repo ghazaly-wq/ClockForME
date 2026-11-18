@@ -5,7 +5,7 @@ public let pageSchemaVersion = 1
 
 public enum BlockKind: String, Codable, CaseIterable, Sendable {
     case heading, text, container, textField, number, sets, counter, checkbox, checklist, choice
-    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button, ai
+    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button, ai, calc
 
     /// Arabic name shown in the builder.
     public var arabicName: String {
@@ -32,6 +32,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .link: return "رابط"
         case .button: return "زر"
         case .ai: return "مساعد ذكي"
+        case .calc: return "حساب"
         }
     }
 
@@ -59,6 +60,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .link: return "link"
         case .button: return "button.horizontal"
         case .ai: return "sparkles"
+        case .calc: return "function"
         }
     }
 
@@ -94,7 +96,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
             ("التنسيق", [.heading, .text, .divider, .container, .image, .link]),
             ("الإدخال", [.textField, .number, .sets, .counter, .checkbox, .checklist, .choice, .rating, .dateTime]),
             ("الوقت", [.timer, .stopwatch]),
-            ("العرض", [.progress, .chart, .history]),
+            ("العرض", [.progress, .chart, .history, .calc]),
             ("الإجراءات", [.button]),
             ("الذكاء", [.ai])
         ]
@@ -186,6 +188,16 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
     public var children: [Block]
     /// AI block: also send the values typed on this page to the AI.
     public var aiIncludesPageData: Bool
+    /// Calc block: how its terms are combined, over which days, and the optional goal.
+    public var calcOp: CalcOp
+    public var calcPeriod: CalcPeriod
+    public var terms: [CalcTerm]
+    /// Multiplies the result (e.g. 400 turns grams / calories into a percentage).
+    public var calcScale: Double
+    /// A block (number or another calc) whose value is this calc's goal.
+    public var targetSourceID: UUID?
+    /// Number/counter used as a goal or setting: when empty today, the last value typed on an earlier day is used.
+    public var carryForward: Bool
 
     public init(
         id: UUID = UUID(), kind: BlockKind, title: String = "", text: String = "", unit: String = "",
@@ -193,7 +205,9 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         target: Double? = nil, options: [String] = [], multiSelect: Bool = false, columns: [String] = [],
         maxRating: Int = 5, seconds: Int = 90, headingSize: HeadingSize = .medium, sourceIDs: [UUID] = [],
         metric: ChartMetric = .value, action: ButtonAction? = nil, linkURL: String = "", linkPageID: UUID? = nil,
-        imageFile: String = "", collapsed: Bool = false, children: [Block] = [], aiIncludesPageData: Bool = false
+        imageFile: String = "", collapsed: Bool = false, children: [Block] = [], aiIncludesPageData: Bool = false,
+        calcOp: CalcOp = .sum, calcPeriod: CalcPeriod = .today, terms: [CalcTerm] = [], calcScale: Double = 1,
+        targetSourceID: UUID? = nil, carryForward: Bool = false
     ) {
         self.id = id; self.kind = kind; self.title = title; self.text = text; self.unit = unit
         self.allowDecimal = allowDecimal; self.multiline = multiline; self.showLast = showLast; self.step = step
@@ -202,12 +216,14 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         self.metric = metric; self.action = action; self.linkURL = linkURL; self.linkPageID = linkPageID
         self.imageFile = imageFile; self.collapsed = collapsed; self.children = children
         self.aiIncludesPageData = aiIncludesPageData
+        self.calcOp = calcOp; self.calcPeriod = calcPeriod; self.terms = terms; self.calcScale = calcScale
+        self.targetSourceID = targetSourceID; self.carryForward = carryForward
     }
 
     enum CodingKeys: String, CodingKey {
         case id, kind, title, text, unit, allowDecimal, multiline, showLast, step, target, options, multiSelect
         case columns, maxRating, seconds, headingSize, sourceIDs, metric, action, linkURL, linkPageID, imageFile
-        case collapsed, children, aiIncludesPageData
+        case collapsed, children, aiIncludesPageData, calcOp, calcPeriod, terms, calcScale, targetSourceID, carryForward
     }
 
     public init(from decoder: Decoder) throws {
@@ -237,6 +253,12 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         collapsed = try c.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false
         children = try c.decodeIfPresent([Block].self, forKey: .children) ?? []
         aiIncludesPageData = try c.decodeIfPresent(Bool.self, forKey: .aiIncludesPageData) ?? false
+        calcOp = try c.decodeIfPresent(CalcOp.self, forKey: .calcOp) ?? .sum
+        calcPeriod = try c.decodeIfPresent(CalcPeriod.self, forKey: .calcPeriod) ?? .today
+        terms = try c.decodeIfPresent([CalcTerm].self, forKey: .terms) ?? []
+        calcScale = try c.decodeIfPresent(Double.self, forKey: .calcScale) ?? 1
+        targetSourceID = try c.decodeIfPresent(UUID.self, forKey: .targetSourceID)
+        carryForward = try c.decodeIfPresent(Bool.self, forKey: .carryForward) ?? false
     }
 
     /// A new block of a kind with sensible Arabic defaults.
@@ -265,6 +287,7 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         case .link: b.title = "رابط"
         case .button: b.title = "إنهاء الجلسة"; b.action = .finishSession
         case .ai: b.title = "اسأل المساعد"
+        case .calc: b.title = "الحساب"
         }
         return b
     }

@@ -79,13 +79,16 @@ struct BlockConfigView: View {
                 TextField("الوحدة (كجم، صفحة، دقيقة...)", text: b.unit)
                 Toggle("يقبل الكسور", isOn: b.allowDecimal)
                 Toggle("أظهر آخر قيمة كتلميح", isOn: b.showLast)
+                Toggle("تذكّر القيمة للأيام الجاية (للأهداف)", isOn: b.carryForward)
+            } footer: {
+                Text("مفيد للأهداف والإعدادات اللي تكتبها مرة وحدة، مثل هدف السعرات. الحسابات تاخذ آخر قيمة كتبتها إذا اليوم فاضي.")
             }
         case .sets:
             Section {
                 TextField("الاسم", text: b.title)
                 Toggle("أظهر مجموعات آخر مرة كتلميح", isOn: b.showLast)
             }
-            listEditor("الأعمدة", add: "إضافة عمود", items: b.columns, limit: 3, minimum: 1)
+            listEditor("الأعمدة", add: "إضافة عمود", items: b.columns, limit: 4, minimum: 1)
         case .counter:
             Section {
                 TextField("الاسم", text: b.title)
@@ -93,6 +96,7 @@ struct BlockConfigView: View {
                 numberRow("الهدف (اختياري)", value: b.target, decimal: true)
                 TextField("الوحدة (اختياري)", text: b.unit)
                 Toggle("أظهر آخر قيمة كتلميح", isOn: b.showLast)
+                Toggle("تذكّر القيمة للأيام الجاية (للأهداف)", isOn: b.carryForward)
             }
         case .checkbox:
             Section { TextField("النص", text: b.title) }
@@ -190,6 +194,8 @@ struct BlockConfigView: View {
             linkSection(b)
         case .button:
             buttonSection(b)
+        case .calc:
+            calcSections(b)
         case .ai:
             Section {
                 TextField("الاسم", text: b.title)
@@ -207,6 +213,94 @@ struct BlockConfigView: View {
             } footer: {
                 Text("لو فعّلته، القيم اللي كتبتها في الصفحة (مثل الوزن والعدّات) تنرسل للمزوّد مع سؤالك عشان يعرف وضعك.")
             }
+        }
+    }
+
+    // MARK: - Calc
+
+    @ViewBuilder
+    private func calcSections(_ b: Binding<Block>) -> some View {
+        let inputs = page.allBlocks.filter {
+            [.number, .counter, .sets, .stopwatch, .rating, .checkbox, .checklist, .calc].contains($0.kind) && $0.id != blockID
+        }
+        Section {
+            TextField("الاسم", text: b.title)
+            TextField("الوحدة (اختياري، مثل سعرة أو جرام)", text: b.unit)
+            Picker("العملية", selection: b.calcOp) {
+                ForEach(CalcOp.allCases, id: \.self) { Text($0.arabicName).tag($0) }
+            }
+            Picker("الفترة", selection: b.calcPeriod) {
+                ForEach(CalcPeriod.allCases, id: \.self) { Text($0.arabicName).tag($0) }
+            }
+            numberRow("يضرب الناتج في (اختياري)", value: Binding(
+                get: { b.wrappedValue.calcScale == 1 ? nil : b.wrappedValue.calcScale },
+                set: { b.wrappedValue.calcScale = ($0 ?? 1) == 0 ? 1 : ($0 ?? 1) }
+            ), decimal: true)
+        } footer: {
+            Text("مثال: السعرات من الماكروز = جمع (بروتين ×4) و(كارب ×4) و(دهون ×9). ونسبة البروتين = قسمة (بروتين ×4) على السعرات، وتضرب الناتج في 100.")
+        }
+
+        Section("المدخلات") {
+            if inputs.isEmpty {
+                Text("أضف قطع أرقام أو جداول أول.").font(.callout).foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(b.wrappedValue.terms.indices, id: \.self) { index in
+                termRow(b, index: index, inputs: inputs)
+            }
+            .onDelete { b.wrappedValue.terms.remove(atOffsets: $0) }
+            if let first = inputs.first {
+                Button("إضافة مدخل") {
+                    b.wrappedValue.terms.append(CalcTerm(blockID: first.id, column: first.kind == .sets ? 0 : nil))
+                }
+                .frame(minHeight: 44)
+            }
+        }
+
+        Section {
+            numberRow("الهدف (اختياري)", value: b.target, decimal: true)
+            Picker("أو الهدف من قطعة", selection: Binding<UUID?>(
+                get: { b.wrappedValue.targetSourceID },
+                set: { b.wrappedValue.targetSourceID = $0 }
+            )) {
+                Text("بدون").tag(UUID?.none)
+                ForEach(page.allBlocks.filter { [.number, .counter, .calc].contains($0.kind) && $0.id != blockID }) { candidate in
+                    Text(name(of: candidate)).tag(UUID?.some(candidate.id))
+                }
+            }
+        } header: {
+            Text("الهدف")
+        } footer: {
+            Text("لو ربطت الهدف برقم فعّل فيه «تذكّر القيمة للأيام الجاية» عشان يبقى الهدف كل يوم.")
+        }
+    }
+
+    private func termRow(_ b: Binding<Block>, index: Int, inputs: [Block]) -> some View {
+        let term = b.wrappedValue.terms[index]
+        let source = inputs.first { $0.id == term.blockID }
+        return VStack(alignment: .leading, spacing: 4) {
+            Picker("القطعة", selection: Binding<UUID>(
+                get: { term.blockID },
+                set: { id in
+                    guard b.wrappedValue.terms.indices.contains(index) else { return }
+                    b.wrappedValue.terms[index].blockID = id
+                    let isSets = inputs.first { $0.id == id }?.kind == .sets
+                    b.wrappedValue.terms[index].column = isSets ? 0 : nil
+                }
+            )) {
+                ForEach(inputs) { Text(name(of: $0)).tag($0.id) }
+            }
+            if let source, source.kind == .sets {
+                Picker("العمود", selection: Binding<Int>(
+                    get: { term.column ?? 0 },
+                    set: { if b.wrappedValue.terms.indices.contains(index) { b.wrappedValue.terms[index].column = $0 } }
+                )) {
+                    ForEach(Array(source.columns.enumerated()), id: \.offset) { Text($0.element.isEmpty ? "عمود \($0.offset + 1)" : $0.element).tag($0.offset) }
+                }
+            }
+            numberRow("المعامل (يضرب القيمة)", value: Binding(
+                get: { term.weight },
+                set: { if b.wrappedValue.terms.indices.contains(index) { b.wrappedValue.terms[index].weight = $0 ?? 1 } }
+            ), decimal: true)
         }
     }
 

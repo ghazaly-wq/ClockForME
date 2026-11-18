@@ -73,6 +73,8 @@ struct PageUseView: View {
         .onChange(of: finishedKey) { _, _ in
             runtime.history = PageActions.finishedSessions(pageID: page.id, records: sessionRecords)
         }
+        .onAppear { refreshAllSessions() }
+        .onChange(of: sessionRecords.count) { _, _ in refreshAllSessions() }
         .onDisappear {
             runtime.flushStopwatches(now: Date())
             PageActions.upsert(runtime.session, records: sessionRecords, context: context)
@@ -164,6 +166,10 @@ struct PageUseView: View {
         ) {
             router.celebrate(outcome)
         }
+    }
+
+    private func refreshAllSessions() {
+        runtime.allSessions = sessionRecords.filter { $0.pageID == page.id }.compactMap(\.session)
     }
 
     private func showFinishNote(_ text: String) {
