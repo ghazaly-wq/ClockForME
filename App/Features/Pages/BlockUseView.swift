@@ -42,6 +42,7 @@ struct BlockUseView: View {
         case .link: linkBlock
         case .button: buttonBlock
         case .ai: card { AIBlockView(block: block, page: page, runtime: runtime) }
+        case .calc: card { CalcBlockView(block: block, page: page, runtime: runtime) }
         }
     }
 

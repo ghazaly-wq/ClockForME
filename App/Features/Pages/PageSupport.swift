@@ -97,6 +97,8 @@ final class PageRuntime {
     var session: PageSession
     /// Finished sessions of this page (for "last time" hints, charts and the history list).
     var history: [PageSession]
+    /// Every stored session of this page (any state), for calc blocks that look back over the week.
+    var allSessions: [PageSession] = []
     var timerEnds: [UUID: Date] = [:]
     private var stopwatchStarts: [UUID: Date] = [:]
     private var stopwatchBase: [UUID: Double] = [:]

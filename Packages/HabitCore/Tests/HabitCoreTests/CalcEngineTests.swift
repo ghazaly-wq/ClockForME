@@ -37,7 +37,7 @@ final class CalcEngineTests: XCTestCase {
         let s = session(UUID(), 10, [a.id: .number(10), b.id: .number(4)])
         let look: CalcEngine.Lookup = { s.value(for: $0) }
         func calc(_ op: CalcOp, scale: Double = 1) -> Block {
-            Block(kind: .calc, terms: [CalcTerm(blockID: a.id), CalcTerm(blockID: b.id)], calcOp: op, calcScale: scale)
+            Block(kind: .calc, calcOp: op, terms: [CalcTerm(blockID: a.id), CalcTerm(blockID: b.id)], calcScale: scale)
         }
         XCTAssertEqual(CalcEngine.value(of: calc(.sum), blocks: [a, b], lookup: look), 14)
         XCTAssertEqual(CalcEngine.value(of: calc(.average), blocks: [a, b], lookup: look), 7)
