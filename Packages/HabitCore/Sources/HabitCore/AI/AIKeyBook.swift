@@ -87,6 +87,11 @@ public struct AIKeyBook: Codable, Equatable, Sendable {
         return entries.filter { $0.provider == provider } + entries.filter { $0.provider != provider }
     }
 
+    /// Keys in fallback order, but keys of providers that can search the web come first (their relative order kept).
+    public func searchCapableFirst() -> [AIKeyEntry] {
+        entries.filter { AIChat.supportsSearch($0.provider) } + entries.filter { !AIChat.supportsSearch($0.provider) }
+    }
+
     /// "AIza…x7Qk" style display so a key is recognisable without being readable.
     public static func masked(_ key: String) -> String {
         guard key.count > 10 else { return String(repeating: "•", count: key.count) }

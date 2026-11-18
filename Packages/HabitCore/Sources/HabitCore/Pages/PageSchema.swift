@@ -5,7 +5,7 @@ public let pageSchemaVersion = 1
 
 public enum BlockKind: String, Codable, CaseIterable, Sendable {
     case heading, text, container, textField, number, sets, counter, checkbox, checklist, choice
-    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button, ai, calc
+    case rating, dateTime, timer, stopwatch, progress, chart, history, divider, image, link, button, ai, calc, nutrition
 
     /// Arabic name shown in the builder.
     public var arabicName: String {
@@ -33,6 +33,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .button: return "زر"
         case .ai: return "مساعد ذكي"
         case .calc: return "حساب"
+        case .nutrition: return "بحث تغذية"
         }
     }
 
@@ -61,6 +62,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
         case .button: return "button.horizontal"
         case .ai: return "sparkles"
         case .calc: return "function"
+        case .nutrition: return "fork.knife"
         }
     }
 
@@ -98,7 +100,7 @@ public enum BlockKind: String, Codable, CaseIterable, Sendable {
             ("الوقت", [.timer, .stopwatch]),
             ("العرض", [.progress, .chart, .history, .calc]),
             ("الإجراءات", [.button]),
-            ("الذكاء", [.ai])
+            ("الذكاء", [.ai, .nutrition])
         ]
     }
 }
@@ -288,6 +290,7 @@ public struct Block: Codable, Equatable, Identifiable, Sendable {
         case .button: b.title = "إنهاء الجلسة"; b.action = .finishSession
         case .ai: b.title = "اسأل المساعد"
         case .calc: b.title = "الحساب"
+        case .nutrition: b.title = "ابحث عن أكلة"
         }
         return b
     }

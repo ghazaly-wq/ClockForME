@@ -42,6 +42,7 @@ public enum AIPageBuilder {
     - divider
     - button: title, action ("finishSession" | "clearFields")
     - calc: title, unit, terms [{"source": title of a block (or of a container, meaning every number/sets block inside it) in the same tab, "column": name of the sets column to read (only for sets), "weight": multiplier, default 1}], op ("sum" | "average" | "difference" | "product" | "ratio"; default sum; difference = first minus the rest; ratio = first divided by second), period ("today" | "weekAverage" | "weekTotal"; default today; week = last 7 days), scale (number multiplied into the result, default 1), target (number, optional goal) or targetSource (title of a number/calc block holding the goal). The calc shows its value with a progress bar toward the goal.
+    - nutrition: title, meals [titles of the containers (or sets tables) that foods are added to, e.g. the meal containers]. Lets the user type foods, looks up calories/macros with AI and adds them to the chosen meal's sets table. A meal container should hold a sets table with nutrient columns (and optionally a textField for the meal description).
     - ai: title, systemPrompt (instructions for an AI helper inside the page), includePageData (bool)
 
     Rules: input blocks are what the user fills in each session; use containers to group related inputs under a name. Titles inside "sources" must match exact titles of blocks in the same tab. End most pages with a finishSession button. Keep it practical and not too long (under 30 blocks per tab). For totals, averages, percentages and goals use calc blocks. Typical pattern for a calorie/macro tracker: a tab with persistent number blocks for the goals; one container per meal, each with a sets block whose columns are the nutrients and whose rows are the foods; then calc blocks: daily total of each nutrient (terms with source = the sets title shared by all meals, one calc per column), calories computed from macros if useful (weights 4, 4, 9), a calc with period weekAverage for the 7-day average, and targetSource pointing at the goal blocks. Percent of calories from protein = ratio of (protein term with weight 4) over (calories term), scale 100. Do not invent block types. Keep the JSON compact: no comments, no trailing commas, short titles. Never output anything except the JSON object.
@@ -87,6 +88,7 @@ public enum AIPageBuilder {
         var terms: [TermSpec]?
         var targetSource: String?
         var persistent: Bool?
+        var meals: [String]?
     }
 
     /// A calc input as the model writes it. `column` may be a column name or a 1-based number.
@@ -242,6 +244,18 @@ public enum AIPageBuilder {
                 if block.kind == .container, block.children.isEmpty { return nil }
                 let spec = specs[block.id]
                 if block.kind == .calc { return resolveCalc(block, spec: spec, matches: matches) }
+                if block.kind == .nutrition {
+                    var ids: [UUID] = []
+                    for title in spec?.meals ?? [] {
+                        for meal in matches(title, among: [.container, .sets]) where !ids.contains(meal.id) {
+                            let hasTable = meal.kind == .sets || meal.children.flattened.contains { $0.kind == .sets }
+                            if hasTable { ids.append(meal.id) }
+                        }
+                    }
+                    guard !ids.isEmpty else { return nil }
+                    block.sourceIDs = ids
+                    return block
+                }
                 guard [.chart, .progress, .history].contains(block.kind) else { return block }
                 let candidates = all.filter { candidate in
                     switch block.kind {
