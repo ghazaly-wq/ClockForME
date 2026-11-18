@@ -196,6 +196,40 @@ struct BlockConfigView: View {
             buttonSection(b)
         case .calc:
             calcSections(b)
+        case .nutrition:
+            Section {
+                TextField("الاسم", text: b.title)
+            } footer: {
+                Text("تكتب الأكل بكلامك والمساعد يبحث عن سعراته وماكروزه ويضيفها لجدول الوجبة اللي تختارها. تحتاج مفتاح ذكاء اصطناعي من الإعدادات.")
+            }
+            Section {
+                let meals = page.allBlocks.filter { $0.kind == .container || $0.kind == .sets }
+                if meals.isEmpty {
+                    Text("أضف مربعات الوجبات (كل مربع فيه جدول مجموعات) أول.")
+                        .font(.callout).foregroundStyle(Theme.textSecondary)
+                }
+                ForEach(meals) { meal in
+                    Button {
+                        var ids = b.wrappedValue.sourceIDs
+                        if let at = ids.firstIndex(of: meal.id) { ids.remove(at: at) } else { ids.append(meal.id) }
+                        b.wrappedValue.sourceIDs = ids
+                    } label: {
+                        HStack {
+                            Text(name(of: meal)).foregroundStyle(Theme.textPrimary)
+                            Spacer()
+                            if b.wrappedValue.sourceIDs.contains(meal.id) {
+                                Image(systemName: "checkmark").foregroundStyle(Theme.primaryStrong)
+                            }
+                        }
+                        .frame(minHeight: 44)
+                    }
+                    .accessibilityAddTraits(b.wrappedValue.sourceIDs.contains(meal.id) ? .isSelected : [])
+                }
+            } header: {
+                Text("الوجبات")
+            } footer: {
+                Text("اختر المربعات (أو الجداول) اللي تنضاف لها الأطعمة. لو المربع فيه مربع كتابة يضاف له اسم الأكلة، وجدول المجموعات تنضاف له أرقامها.")
+            }
         case .ai:
             Section {
                 TextField("الاسم", text: b.title)

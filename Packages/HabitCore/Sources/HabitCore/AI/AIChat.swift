@@ -49,8 +49,17 @@ public enum AIChat {
         return URL(string: text)!
     }
 
+    /// Providers whose API can search the web in a plain chat request (Google, OpenAI, Qwen). Kimi and DeepSeek can't here.
+    public static func supportsSearch(_ provider: AIProvider) -> Bool {
+        provider == .google || provider == .openai || provider == .qwen
+    }
+
+    /// OpenAI only searches through its dedicated search model on the chat endpoint.
+    static let openAISearchModel = "gpt-5-search-api"
+
     public static func request(
-        provider: AIProvider, key: String, system: String?, messages: [AIMessage], maxTokens: Int = 2000
+        provider: AIProvider, key: String, system: String?, messages: [AIMessage], maxTokens: Int = 2000,
+        webSearch: Bool = false
     ) -> AIHTTPRequest {
         var headers = ["Content-Type": "application/json"]
         let body: [String: Any]
@@ -65,13 +74,21 @@ public enum AIChat {
                 "generationConfig": ["maxOutputTokens": maxTokens, "thinkingConfig": ["thinkingBudget": 0]]
             ]
             if let system, !system.isEmpty { payload["systemInstruction"] = ["parts": [["text": system]]] }
+            if webSearch { payload["tools"] = [["google_search": [String: Any]()]] }
             body = payload
         case .openai, .kimi, .qwen, .deepseek:
             headers["Authorization"] = "Bearer \(key)"
             var list: [[String: String]] = []
             if let system, !system.isEmpty { list.append(["role": "system", "content": system]) }
             list += messages.map { ["role": $0.role.rawValue, "content": $0.text] }
-            body = ["model": model(for: provider), "messages": list, "max_tokens": maxTokens]
+            var payload: [String: Any] = ["model": model(for: provider), "messages": list, "max_tokens": maxTokens]
+            if webSearch, provider == .openai {
+                payload["model"] = openAISearchModel
+                payload["web_search_options"] = [String: Any]()
+                payload["max_tokens"] = nil   // the search model rejects max_tokens
+            }
+            if webSearch, provider == .qwen { payload["enable_search"] = true }
+            body = payload
         }
         let data = (try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data()
         return AIHTTPRequest(url: chatURL(for: provider), headers: headers, body: data)
@@ -90,6 +107,27 @@ public enum AIChat {
         }
         guard let text, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         return text
+    }
+
+    /// Web pages a search-enabled answer relied on (Google grounding chunks, OpenAI url citations), as URLs.
+    public static func sources(provider: AIProvider, data: Data) -> [String] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
+        var urls: [String] = []
+        switch provider {
+        case .google:
+            let meta = (root["candidates"] as? [[String: Any]])?.first?["groundingMetadata"] as? [String: Any]
+            for chunk in meta?["groundingChunks"] as? [[String: Any]] ?? [] {
+                if let web = chunk["web"] as? [String: Any], let uri = web["uri"] as? String { urls.append(uri) }
+            }
+        case .openai:
+            let message = (root["choices"] as? [[String: Any]])?.first?["message"] as? [String: Any]
+            for note in message?["annotations"] as? [[String: Any]] ?? [] {
+                if let cite = note["url_citation"] as? [String: Any], let url = cite["url"] as? String { urls.append(url) }
+            }
+        default: break
+        }
+        var seen = Set<String>()
+        return urls.filter { seen.insert($0).inserted }
     }
 
     /// Short readable reason from an error body (`{"error":{"message":...}}`), falling back to the status code.
@@ -128,15 +166,19 @@ public enum AIChat {
         system: String?,
         messages: [AIMessage],
         maxTokens: Int = 2000,
+        webSearch: Bool = false,
         send: (AIKeyEntry, AIHTTPRequest) async throws -> Data
-    ) async throws -> (text: String, used: AIKeyEntry) {
+    ) async throws -> (text: String, used: AIKeyEntry, searched: Bool, sources: [String]) {
         guard !keys.isEmpty else { throw AIChatError.noKeys }
         var failures: [String] = []
         for entry in keys {
-            let request = request(provider: entry.provider, key: entry.key, system: system, messages: messages, maxTokens: maxTokens)
+            let searching = webSearch && supportsSearch(entry.provider)
+            let request = request(provider: entry.provider, key: entry.key, system: system, messages: messages, maxTokens: maxTokens, webSearch: searching)
             do {
                 let data = try await send(entry, request)
-                if let text = reply(provider: entry.provider, data: data) { return (text, entry) }
+                if let text = reply(provider: entry.provider, data: data) {
+                    return (text, entry, searching, searching ? sources(provider: entry.provider, data: data) : [])
+                }
                 failures.append("\(entry.provider.displayName): \(arabicReason(.badResponse))")
             } catch let error as AIChatError {
                 failures.append("\(entry.provider.displayName): \(arabicReason(error))")

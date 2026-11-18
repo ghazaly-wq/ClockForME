@@ -22,9 +22,19 @@ enum AIClient {
     /// Asks with every saved key in fallback order (optionally preferring one provider).
     static func ask(system: String?, messages: [AIMessage], maxTokens: Int = 2000, preferring: AIProvider? = nil) async throws -> (text: String, used: AIKeyEntry) {
         let keys = AIKeyStore.load().fallbackOrder(preferring: preferring)
-        return try await AIChat.complete(keys: keys, system: system, messages: messages, maxTokens: maxTokens) { _, request in
+        let result = try await AIChat.complete(keys: keys, system: system, messages: messages, maxTokens: maxTokens) { _, request in
             try await send(request)
         }
+        return (result.text, result.used)
+    }
+
+    /// Like `ask`, but keys that can search the web are tried first and asked to search.
+    static func askWithSearch(system: String?, messages: [AIMessage], maxTokens: Int = 4000) async throws -> (text: String, searched: Bool, sources: [String]) {
+        let keys = AIKeyStore.load().searchCapableFirst()
+        let result = try await AIChat.complete(keys: keys, system: system, messages: messages, maxTokens: maxTokens, webSearch: true) { _, request in
+            try await send(request)
+        }
+        return (result.text, result.searched, result.sources)
     }
 
     /// Checks one key with a tiny request. Returns nil when it works, otherwise an Arabic reason.
