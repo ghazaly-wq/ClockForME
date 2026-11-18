@@ -77,3 +77,39 @@ final class AIPageBuilderTests: XCTestCase {
         XCTAssertEqual(AIPageBuilder.page(from: #"{"name":"x","tabs":[]}"#), .failure(.empty))
     }
 }
+
+final class AIPageBuilderCalcTests: XCTestCase {
+    private func page(_ json: String) -> PageDefinition? {
+        if case .success(let page) = AIPageBuilder.page(from: json) { return page }
+        return nil
+    }
+
+    private let tracker = #"""
+    {"name":"سعراتي","tabs":[{"name":"اليوم","blocks":[
+      {"type":"number","title":"هدف السعرات","persistent":true},
+      {"type":"container","title":"الفطور","children":[{"type":"sets","title":"الأطعمة","columns":["السعرات","البروتين"]}]},
+      {"type":"container","title":"الغداء","children":[{"type":"sets","title":"الأطعمة","columns":["السعرات","البروتين"]}]},
+      {"type":"calc","title":"سعرات اليوم","terms":[{"source":"الأطعمة","column":"السعرات"}],"targetSource":"هدف السعرات"},
+      {"type":"calc","title":"متوسط البروتين","period":"weekAverage","terms":[{"source":"الأطعمة","column":2}]}
+    ]}]}
+    """#
+
+    func testCalcTermsExpandToEverySetsTableWithThatTitle() {
+        let tab = page(tracker)?.tabs.first
+        let blocks = tab?.blocks ?? []
+        let calc = blocks.first { $0.title == "سعرات اليوم" }
+        XCTAssertEqual(calc?.terms.count, 2)
+        XCTAssertEqual(calc?.terms.map(\.column), [0, 0])
+        let goal = blocks.first { $0.title == "هدف السعرات" }
+        XCTAssertEqual(goal?.carryForward, true)
+        XCTAssertEqual(calc?.targetSourceID, goal?.id)
+        let protein = blocks.first { $0.title == "متوسط البروتين" }
+        XCTAssertEqual(protein?.calcPeriod, .weekAverage)
+        XCTAssertEqual(protein?.terms.map(\.column), [1, 1])
+    }
+
+    func testCalcWithoutResolvableTermsIsDropped() {
+        let result = page(#"{"name":"x","tabs":[{"name":"a","blocks":[{"type":"number","title":"n"},{"type":"calc","title":"c","terms":[{"source":"nope"}]}]}]}"#)
+        XCTAssertEqual(result?.tabs.first?.blocks.map(\.kind), [.number])
+    }
+}

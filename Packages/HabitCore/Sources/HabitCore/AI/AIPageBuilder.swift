@@ -26,8 +26,8 @@ public enum AIPageBuilder {
     - text: text (a static note)
     - container: title, children [BLOCK] (a titled box, e.g. one exercise; children may not contain containers)
     - textField: title, multiline (bool)
-    - number: title, unit, allowDecimal (bool), target (number, optional)
-    - sets: title, columns [two names, e.g. ["الوزن (كجم)","العدّات"]], allowDecimal (bool)
+    - number: title, unit, allowDecimal (bool), target (number, optional), persistent (bool: true for goals/settings the user enters once, like a daily calorie goal; its value is remembered on later days)
+    - sets: title, columns [2 to 4 column names, e.g. ["الوزن (كجم)","العدّات"] or ["السعرات","البروتين","الكارب","الدهون"]], allowDecimal (bool). The user can add as many rows as they like (one row per set, or per food item).
     - counter: title, unit, target (number, optional)
     - checkbox: title
     - checklist: title, options [items]
@@ -41,9 +41,10 @@ public enum AIPageBuilder {
     - history: title, sources [titles of input blocks in the same tab]
     - divider
     - button: title, action ("finishSession" | "clearFields")
+    - calc: title, unit, terms [{"source": title of a block (or of a container, meaning every number/sets block inside it) in the same tab, "column": name of the sets column to read (only for sets), "weight": multiplier, default 1}], op ("sum" | "average" | "difference" | "product" | "ratio"; default sum; difference = first minus the rest; ratio = first divided by second), period ("today" | "weekAverage" | "weekTotal"; default today; week = last 7 days), scale (number multiplied into the result, default 1), target (number, optional goal) or targetSource (title of a number/calc block holding the goal). The calc shows its value with a progress bar toward the goal.
     - ai: title, systemPrompt (instructions for an AI helper inside the page), includePageData (bool)
 
-    Rules: input blocks are what the user fills in each session; use containers to group related inputs under a name. Titles inside "sources" must match exact titles of blocks in the same tab. End most pages with a finishSession button. Keep it practical and not too long (under 30 blocks per tab). Blocks cannot calculate: there are no formulas or automatic totals/averages. Approximate such requests with the blocks above: number blocks (with target and a progress bar for "daily total vs goal"), a chart or history of those blocks for trends over days, and an ai block with includePageData true for anything that needs calculation or advice. Do not invent block types. Keep the JSON compact: no comments, no trailing commas, short titles. Never output anything except the JSON object.
+    Rules: input blocks are what the user fills in each session; use containers to group related inputs under a name. Titles inside "sources" must match exact titles of blocks in the same tab. End most pages with a finishSession button. Keep it practical and not too long (under 30 blocks per tab). For totals, averages, percentages and goals use calc blocks. Typical pattern for a calorie/macro tracker: a tab with persistent number blocks for the goals; one container per meal, each with a sets block whose columns are the nutrients and whose rows are the foods; then calc blocks: daily total of each nutrient (terms with source = the sets title shared by all meals, one calc per column), calories computed from macros if useful (weights 4, 4, 9), a calc with period weekAverage for the 7-day average, and targetSource pointing at the goal blocks. Percent of calories from protein = ratio of (protein term with weight 4) over (calories term), scale 100. Do not invent block types. Keep the JSON compact: no comments, no trailing commas, short titles. Never output anything except the JSON object.
     """
 
     // MARK: - Spec (what the model returns)
@@ -80,6 +81,32 @@ public enum AIPageBuilder {
         var systemPrompt: String?
         var includePageData: Bool?
         var children: [BlockSpec]?
+        var op: String?
+        var period: String?
+        var scale: Double?
+        var terms: [TermSpec]?
+        var targetSource: String?
+        var persistent: Bool?
+    }
+
+    /// A calc input as the model writes it. `column` may be a column name or a 1-based number.
+    private struct TermSpec: Decodable {
+        var source: String?
+        var column: String?
+        var weight: Double?
+
+        enum CodingKeys: String, CodingKey { case source, column, weight }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            source = try? c.decode(String.self, forKey: .source)
+            weight = try? c.decode(Double.self, forKey: .weight)
+            if let text = try? c.decode(String.self, forKey: .column) {
+                column = text
+            } else if let number = try? c.decode(Int.self, forKey: .column) {
+                column = String(number)
+            }
+        }
     }
 
     private static let accents: Set<String> = ["green", "blue", "purple", "orange", "pink", "gray"]
@@ -98,11 +125,11 @@ public enum AIPageBuilder {
 
         var tabs: [PageTab] = []
         for tabSpec in (spec.tabs ?? []).prefix(maxTabs) {
-            var wanted: [UUID: [String]] = [:]
-            let blocks = build(tabSpec.blocks ?? [], depth: 0, wanted: &wanted)
+            var specs: [UUID: BlockSpec] = [:]
+            let blocks = build(tabSpec.blocks ?? [], depth: 0, specs: &specs)
             let name = clean(tabSpec.name, limit: 40)
             if blocks.isEmpty { continue }
-            let resolved = resolveSources(blocks, wanted: wanted)
+            let resolved = resolveSources(blocks, specs: specs)
             if resolved.isEmpty { continue }
             tabs.append(PageTab(name: name.isEmpty ? "الرئيسية" : name, blocks: resolved))
         }
@@ -132,10 +159,10 @@ public enum AIPageBuilder {
     /// Blocks the model may use. Images need a file and links need a validated URL, so they're not offered.
     private static let allowed: Set<BlockKind> = Set(BlockKind.allCases).subtracting([.image, .link])
 
-    private static func build(_ specs: [BlockSpec], depth: Int, wanted: inout [UUID: [String]]) -> [Block] {
+    private static func build(_ items: [BlockSpec], depth: Int, specs: inout [UUID: BlockSpec]) -> [Block] {
         var result: [Block] = []
         var budget = maxBlocksPerTab
-        for spec in specs {
+        for spec in items {
             guard budget > 0, let kind = kind(spec.type), allowed.contains(kind) else { continue }
             if kind == .container, depth >= maxDepth - 1 { continue }
             var block = Block.make(kind)
@@ -143,11 +170,11 @@ public enum AIPageBuilder {
             if !title.isEmpty || kind == .divider { block.title = title }
             apply(spec, to: &block)
             if kind == .container {
-                block.children = build(spec.children ?? [], depth: depth + 1, wanted: &wanted)
+                block.children = build(spec.children ?? [], depth: depth + 1, specs: &specs)
                 if block.children.isEmpty { continue }
             }
             if kind == .checklist || kind == .choice, block.options.isEmpty { continue }
-            if let sources = spec.sources { wanted[block.id] = sources }
+            specs[block.id] = spec
             result.append(block)
             budget -= 1 + block.children.count
         }
@@ -166,7 +193,7 @@ public enum AIPageBuilder {
         }
         if let columns = spec.columns, block.kind == .sets {
             let list = columns.map { clean($0, limit: 30) }.filter { !$0.isEmpty }
-            if list.count >= 2 { block.columns = Array(list.prefix(2)) }
+            if !list.isEmpty { block.columns = Array(list.prefix(4)) }
         }
         if let rating = spec.maxRating { block.maxRating = min(max(rating, 3), 10) }
         if let seconds = spec.seconds { block.seconds = min(max(seconds, 5), 7200) }
@@ -178,6 +205,12 @@ public enum AIPageBuilder {
             default: block.action = .finishSession
             }
         }
+        if block.kind == .calc {
+            if let name = spec.op, let op = CalcOp(rawValue: name) { block.calcOp = op }
+            if let name = spec.period, let period = CalcPeriod(rawValue: name) { block.calcPeriod = period }
+            if let scale = spec.scale, scale.isFinite, scale != 0 { block.calcScale = scale }
+        }
+        if (block.kind == .number || block.kind == .counter), spec.persistent == true { block.carryForward = true }
         if block.kind == .ai {
             block.text = String((spec.systemPrompt ?? "").prefix(1500))
             block.aiIncludesPageData = spec.includePageData ?? false
@@ -188,14 +221,27 @@ public enum AIPageBuilder {
 
     /// Fills `sourceIDs` by matching the titles the model gave to blocks in the same tab, and drops
     /// charts/progress bars that end up with no valid source.
-    private static func resolveSources(_ blocks: [Block], wanted: [UUID: [String]]) -> [Block] {
+    private static let calcInputs: Set<BlockKind> = [.number, .counter, .sets, .stopwatch, .rating, .checkbox, .checklist, .calc]
+
+    private static func resolveSources(_ blocks: [Block], specs: [UUID: BlockSpec]) -> [Block] {
         let all = blocks.flattened
+
+        /// Blocks a title refers to: every block with that title, or, for a container, everything inside it.
+        func matches(_ title: String, among kinds: Set<BlockKind>) -> [Block] {
+            let direct = all.filter { $0.title == title && kinds.contains($0.kind) }
+            if !direct.isEmpty { return direct }
+            return all.filter { $0.kind == .container && $0.title == title }
+                .flatMap { $0.children.flattened }
+                .filter { kinds.contains($0.kind) }
+        }
 
         func resolved(_ list: [Block]) -> [Block] {
             list.compactMap { original in
                 var block = original
                 block.children = resolved(block.children)
                 if block.kind == .container, block.children.isEmpty { return nil }
+                let spec = specs[block.id]
+                if block.kind == .calc { return resolveCalc(block, spec: spec, matches: matches) }
                 guard [.chart, .progress, .history].contains(block.kind) else { return block }
                 let candidates = all.filter { candidate in
                     switch block.kind {
@@ -205,7 +251,7 @@ public enum AIPageBuilder {
                     }
                 }
                 var picked: [Block] = []
-                for title in wanted[block.id] ?? [] {
+                for title in spec?.sources ?? [] {
                     if let match = candidates.first(where: { $0.title == title }), !picked.contains(where: { $0.id == match.id }) {
                         picked.append(match)
                     }
@@ -220,5 +266,37 @@ public enum AIPageBuilder {
             }
         }
         return resolved(blocks)
+    }
+
+    private static func resolveCalc(_ original: Block, spec: BlockSpec?, matches: (String, Set<BlockKind>) -> [Block]) -> Block? {
+        var block = original
+        var terms: [CalcTerm] = []
+        for term in spec?.terms ?? [] {
+            guard let source = term.source else { continue }
+            for target in matches(source, calcInputs) where target.id != block.id {
+                var column: Int?
+                if target.kind == .sets {
+                    guard let named = term.column else { column = 0; terms.append(CalcTerm(blockID: target.id, column: 0, weight: term.weight ?? 1)); continue }
+                    let names = target.columns
+                    if let index = names.firstIndex(of: named) {
+                        column = index
+                    } else if let number = Int(named), number >= 1, number <= max(names.count, 1) {
+                        column = number - 1
+                    } else {
+                        continue   // this sets table doesn't have that column
+                    }
+                }
+                terms.append(CalcTerm(blockID: target.id, column: column, weight: term.weight ?? 1))
+            }
+        }
+        // Drop duplicates, cap the size.
+        var seen = Set<String>()
+        terms = terms.filter { seen.insert("\($0.blockID)|\($0.column ?? -1)|\($0.weight)").inserted }
+        guard !terms.isEmpty else { return nil }
+        block.terms = Array(terms.prefix(40))
+        if let title = spec?.targetSource, block.target == nil {
+            block.targetSourceID = matches(title, [.number, .counter, .calc]).first { $0.id != block.id }?.id
+        }
+        return block
     }
 }
